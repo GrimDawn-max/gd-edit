@@ -1,0 +1,72 @@
+THIRD-PARTY COMPONENTS
+======================
+
+gd-edit itself is distributed under the Eclipse Public License (see LICENSE.txt).
+
+gd-edit-standalone.jar bundles the libraries below. Each remains under its own
+license, reproduced by its respective project. Where a license requires it,
+source is available from the listed project pages.
+
+  Clojure, core.match, core.cache, core.async, data.json, data.csv, tools.cli
+      Eclipse Public License 1.0
+      https://clojure.org/
+
+  clj-http                            Apache License 2.0 / MIT
+      https://github.com/dakrone/clj-http
+
+  com.rpl/specter                     Apache License 2.0
+      https://github.com/redplanetlabs/specter
+
+  com.taoensso/timbre                 Eclipse Public License 1.0
+      https://github.com/taoensso/timbre
+
+  cpath-clj                           Eclipse Public License 1.0
+      https://github.com/xsc/cpath-clj
+
+  expound                             Eclipse Public License 1.0
+      https://github.com/bhb/expound
+
+  instaparse                          Eclipse Public License 1.0
+      https://github.com/Engelberg/instaparse
+
+  jansi / jansi-clj                   Apache License 2.0
+      https://github.com/fusesource/jansi
+
+  jline 2                             BSD 3-Clause
+      https://github.com/jline/jline2
+
+  kmp-search                          Eclipse Public License 1.0
+
+  lz4-java                            Apache License 2.0
+      https://github.com/lz4/lz4-java
+
+  me.raynes/fs                        Eclipse Public License 1.0
+      https://github.com/Raynes/fs
+
+  net.java.dev.jna (JNA, JNA Platform) Apache License 2.0 / LGPL 2.1
+      https://github.com/java-native-access/jna
+
+  org.flatland/ordered                Eclipse Public License 1.0
+      https://github.com/clj-commons/ordered
+
+  progress                            Eclipse Public License 1.0
+
+  clj-fuzzy (vendored in src/clj_fuzzy) Eclipse Public License 1.0
+      https://github.com/yomguithereal/clj-fuzzy
+
+  clansi (vendored in src/clansi)      Eclipse Public License 1.0
+
+
+JAVA RUNTIME
+------------
+
+No Java runtime is included in this distribution. gd-edit runs on any Java 17
+or newer runtime that you install separately; see README.txt.
+
+
+GRIM DAWN
+---------
+
+gd-edit is an unofficial, community tool. It is not affiliated with, endorsed
+by, or supported by Crate Entertainment. Grim Dawn and its game data are the
+property of Crate Entertainment. No game assets are distributed here.

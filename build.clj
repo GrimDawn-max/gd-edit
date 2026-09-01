@@ -252,6 +252,108 @@
      :exe-file exe-file}))
 
 
+;;------------------------------------------------------------------------------
+;; Distribution archives
+;;
+;; Produces one zip per platform, each self-contained: the jar, a launcher, and
+;; the docs. No Java runtime is bundled, which is what lets all three archives be
+;; built from a single machine -- see packaging/common/README.txt.
+;;------------------------------------------------------------------------------
+
+(def dist-dir "target/dist")
+
+(defn- copy-file
+  [src dst]
+  (io/make-parents dst)
+  (io/copy (io/file src) (io/file dst)))
+
+(defn- copy-template
+  "Copy a text file, substituting @VERSION@."
+  [src dst]
+  (io/make-parents dst)
+  (spit dst (str/replace (slurp src) "@VERSION@" version)))
+
+(defn- copy-common-docs
+  [target]
+  (copy-template "packaging/common/README.txt" (str target "/README.txt"))
+  (copy-file "packaging/common/THIRD-PARTY.txt" (str target "/THIRD-PARTY.txt"))
+  (copy-file "LICENSE" (str target "/LICENSE.txt")))
+
+(defn- make-executable
+  [path]
+  (.setExecutable (io/file path) true false))
+
+(defn- zip-dir
+  "Zip the contents of `dir` into `zipfile`. Uses the system zip so that the unix
+  executable bits on the launchers survive into the archive."
+  [dir zipfile]
+  (let [zip (.getAbsolutePath (io/file zipfile))]
+    (fs/delete zip)
+    (let [{:keys [exit err]} (clojure.java.shell/sh "zip" "-q" "-r" zip "." :dir dir)]
+      (when-not (zero? exit)
+        (throw (ex-info (str "zip failed: " err) {:dir dir}))))
+    zip))
+
+(defn- dist-macos
+  [jar]
+  (let [root (str dist-dir "/macos")
+        app  (str root "/gd-edit.app")]
+    ;; The jar lives inside the bundle so the .app stays self-contained if it is
+    ;; moved out of the unzipped folder.
+    (copy-file jar (str app "/Contents/Java/gd-edit-standalone.jar"))
+    (copy-template "packaging/macos/gd-edit.app/Contents/Info.plist"
+                   (str app "/Contents/Info.plist"))
+    (copy-file "packaging/macos/gd-edit.app/Contents/Resources/GDIcon.icns"
+               (str app "/Contents/Resources/GDIcon.icns"))
+    (copy-file "packaging/macos/gd-edit.app/Contents/MacOS/gd-edit"
+               (str app "/Contents/MacOS/gd-edit"))
+    (copy-file "packaging/common/gd-edit-launcher.sh"
+               (str app "/Contents/MacOS/run-gd-edit.sh"))
+    (make-executable (str app "/Contents/MacOS/gd-edit"))
+    (make-executable (str app "/Contents/MacOS/run-gd-edit.sh"))
+
+    ;; Terminal-friendly launcher alongside the bundle. It finds the jar inside
+    ;; the .app, so there is only ever one copy of it.
+    (copy-file "packaging/common/gd-edit-launcher.sh" (str root "/gd-edit.command"))
+    (make-executable (str root "/gd-edit.command"))
+
+    (copy-common-docs root)
+    (zip-dir root (format "%s/gd-edit-%s-macos.zip" dist-dir version))))
+
+(defn- dist-linux
+  [jar]
+  (let [root (str dist-dir "/linux")]
+    (copy-file jar (str root "/gd-edit-standalone.jar"))
+    (copy-file "packaging/common/gd-edit-launcher.sh" (str root "/gd-edit.sh"))
+    (make-executable (str root "/gd-edit.sh"))
+    (copy-common-docs root)
+    (zip-dir root (format "%s/gd-edit-%s-linux.zip" dist-dir version))))
+
+(defn- dist-windows
+  [jar]
+  (let [root (str dist-dir "/windows")]
+    (copy-file jar (str root "/gd-edit-standalone.jar"))
+    (copy-file "packaging/windows/gd-edit.bat" (str root "/gd-edit.bat"))
+    (copy-common-docs root)
+    (zip-dir root (format "%s/gd-edit-%s-windows.zip" dist-dir version))))
+
+(defn dist
+  "Build the uberjar and package a release zip for each platform."
+  [_]
+  (uber {})
+
+  (let [jar (b/resolve-path uber-file)]
+    (print-build-stage "Packaging macOS...")
+    (let [z (dist-macos jar)] (println "   " z))
+
+    (print-build-stage "Packaging Windows...")
+    (let [z (dist-windows jar)] (println "   " z))
+
+    (print-build-stage "Packaging Linux...")
+    (let [z (dist-linux jar)] (println "   " z)))
+
+  (println "\nRelease archives are in" dist-dir))
+
 (defn make-dropbox-client
   []
   (let [config (DbxRequestConfig. "GDUploader/0.1" "en_US")

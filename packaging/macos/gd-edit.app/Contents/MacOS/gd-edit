@@ -1,0 +1,48 @@
+#!/bin/bash
+# gd-edit .app launcher for macOS.
+#
+# gd-edit is a console program, so the bundle's job is to open a terminal window
+# and run the real launcher inside it. It writes a temporary .command file and
+# hands it to `open`, which uses whatever the user has associated with .command
+# -- Terminal.app by default, iTerm2 if they have set it as the handler. This
+# deliberately avoids AppleScript targeting a specific terminal app, which fails
+# outright on machines that do not have that app installed.
+
+set -u
+
+APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+JAR_PATH="$APP_DIR/Java/gd-edit-standalone.jar"
+
+# Where settings.edn and gd-edit.log should live: the folder containing the .app,
+# so an unzipped install stays self-contained. If that is not writable (e.g. the
+# app was dragged into /Applications), fall back to the user's home directory.
+INSTALL_DIR="$(cd "$APP_DIR/../.." && pwd)"
+if [ ! -w "$INSTALL_DIR" ]; then
+    INSTALL_DIR="$HOME"
+fi
+
+if [ ! -f "$JAR_PATH" ]; then
+    osascript -e 'display alert "gd-edit" message "gd-edit-standalone.jar is missing from this app bundle."' >/dev/null 2>&1
+    exit 1
+fi
+
+TEMP_DIR="$(mktemp -d)"
+TEMP_SCRIPT="$TEMP_DIR/gd-edit.command"
+
+cat > "$TEMP_SCRIPT" <<SCRIPT
+#!/bin/bash
+clear
+GD_EDIT_WORKDIR="$INSTALL_DIR" "$APP_DIR/MacOS/run-gd-edit.sh"
+status=\$?
+rm -rf "$TEMP_DIR"
+if [ \$status -ne 0 ]; then
+    echo ""
+    read -n 1 -s -r -p "Press any key to close this window..."
+    echo ""
+fi
+SCRIPT
+
+chmod +x "$TEMP_SCRIPT"
+
+# `open` honours the user's chosen handler for .command files.
+open "$TEMP_SCRIPT"
