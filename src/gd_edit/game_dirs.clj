@@ -17,19 +17,40 @@
        (catch Exception _ nil)))
 
 (defn get-steam-path
-  "Get steam installation path"
+  "Get steam installation path, or nil if Steam isn't installed.
+
+  Windows records it in the registry; macOS and Linux use fixed locations."
   []
 
-  (u/log-exceptions-with t/debug
-   (Advapi32Util/registryGetStringValue WinReg/HKEY_CURRENT_USER
-                                        "SOFTWARE\\Valve\\Steam"
-                                        "SteamPath")))
+  (cond
+    (u/running-windows?)
+    (u/log-exceptions-with t/debug
+     (Advapi32Util/registryGetStringValue WinReg/HKEY_CURRENT_USER
+                                          "SOFTWARE\\Valve\\Steam"
+                                          "SteamPath"))
+
+    (u/running-osx?)
+    (->> [(u/expand-home "~/Library/Application Support/Steam")]
+         (filter u/path-exists?)
+         first)
+
+    :else
+    (->> [(u/expand-home "~/.steam/steam")
+          (u/expand-home "~/.local/share/Steam")
+          (u/expand-home "~/.steam/root")]
+         (filter u/path-exists?)
+         first)))
 
 (defn get-steam-library-folders
-  "Retrieves the library folders as defined in steamapps/libraryfolders.vdf"
+  "Retrieves the library folders as defined in steamapps/libraryfolders.vdf
+
+  Steam games are often installed outside the main Steam folder -- a second
+  drive, an external disk -- and this is the only record of where."
   []
-  (let [lib-folder-file (io/file (get-steam-path) "steamapps/libraryfolders.vdf")]
-    (when (.exists lib-folder-file)
+  (let [steam-path (get-steam-path)
+        lib-folder-file (when steam-path
+                          (io/file steam-path "steamapps/libraryfolders.vdf"))]
+    (when (and lib-folder-file (.exists lib-folder-file))
       (as-> lib-folder-file $
         (vdf/parse $)
         (get $ "libraryfolders")
@@ -44,21 +65,88 @@
         (map #(get % "path") $)
         ))))
 
+(defn- subdirs-of
+  "Immediate subdirectories of `path`, or nil if it isn't a directory."
+  [path]
+  (let [dir (io/file path)]
+    (when (.isDirectory dir)
+      (->> (.listFiles dir)
+           (filter #(.isDirectory %))))))
+
+(defn- wine-drive-c-dirs
+  "Candidate C: drives of Wine prefixes on this machine.
+
+  Grim Dawn has no native macOS or Linux build, so on those platforms both the
+  game and its saves live inside a Wine prefix -- a CrossOver or Whisky bottle
+  on macOS, a Proton prefix or ~/.wine on Linux."
+  []
+  (cond
+    (u/running-osx?)
+    (->> [(u/expand-home "~/Library/Application Support/CrossOver/Bottles")
+          (u/expand-home "~/Library/Containers/com.isaacmarovitz.Whisky/Bottles")]
+         (mapcat subdirs-of)
+         (map #(io/file % "drive_c")))
+
+    (u/running-linux?)
+    (concat
+     [(io/file (u/expand-home "~/.wine") "drive_c")]
+     (->> [(u/expand-home "~/.steam/steam/steamapps/compatdata")
+           (u/expand-home "~/.local/share/Steam/steamapps/compatdata")]
+          (mapcat subdirs-of)
+          (map #(io/file % "pfx" "drive_c"))))
+
+    :else
+    []))
+
+(def ^:private wine-game-subpaths
+  ["GOG Games/Grim Dawn"
+   "Program Files (x86)/Steam/steamapps/common/Grim Dawn"
+   "Program Files/Steam/steamapps/common/Grim Dawn"
+   "Program Files (x86)/Grim Dawn"])
+
+(defn- steam-library-dirs
+  "Every Steam library on this machine: the main install plus any extra library
+  folders the user has added."
+  []
+  (->> (concat [(get-steam-path)] (get-steam-library-folders))
+       (remove nil?)
+       (distinct)))
+
+(defn- steam-game-dirs
+  "Where Steam would have put Grim Dawn.
+
+  Skipped on macOS: Steam runs there, but Grim Dawn ships no macOS build, so a
+  native macOS Steam library can never contain it. A Mac user running the game
+  through Windows Steam inside a Wine bottle is covered by `wine-game-subpaths`
+  instead.
+
+  Under Proton on Linux the game files do live here, outside the prefix -- only
+  the saves go into the prefix."
+  []
+  (when-not (u/running-osx?)
+    (map #(.getPath (io/file % "steamapps" "common" "Grim Dawn"))
+         (steam-library-dirs))))
+
 (defn- standard-game-dirs
   "Get the game's expected installation paths"
   []
 
-  (cond
-    (u/running-osx?)
-    [(u/expand-home "~/Dropbox/Public/GrimDawn")]
+  (concat
+   ;; Steam, on every platform
+   (steam-game-dirs)
 
-    (u/running-linux?)
-    [""]
+   (if (u/running-windows?)
+     ;; GOG's defaults
+     [(.getPath (io/file "C:\\" "GOG Games" "Grim Dawn"))
+      (.getPath (io/file "C:\\" "Program Files (x86)" "GOG Galaxy" "Games" "Grim Dawn"))]
 
-    :else
-    (->> (concat [(get-steam-path)] (get-steam-library-folders))
-         (remove nil?)
-         (map #(str % "\\steamapps\\common\\Grim Dawn")))))
+     ;; Elsewhere the game runs under Wine, so look inside the prefixes too
+     (concat
+      (when (u/running-linux?)
+        [(u/expand-home "~/GOG Games/Grim Dawn")])
+      (for [drive-c (wine-drive-c-dirs)
+            sub wine-game-subpaths]
+        (.getPath (io/file drive-c sub)))))))
 
 (defn- clean-list
   "Removes nil from collection and return a list"
@@ -80,31 +168,42 @@
    (clean-list (into [(get settings :game-dir)] (standard-game-dirs)))))
 
 (defn get-steam-cloud-save-dirs
+  "Steam Cloud copies of the saves, one per logged-in Steam account.
+  219990 is Grim Dawn's Steam app id."
   []
 
-  (when (u/running-windows?)
-    (let [userdata-dir (io/file (get-steam-path) "userdata")]
-      (->> (io/file userdata-dir)
-           (.listFiles)
-           (filter #(.isDirectory %1))
-           (map #(io/file % "219990\\remote\\save\\main"))
+  ;; Skipped on macOS for the same reason as `steam-game-dirs`: without a macOS
+  ;; build there is no macOS Steam install of the game to sync saves for.
+  (when-not (u/running-osx?)
+    (when-let [steam-path (get-steam-path)]
+      (->> (subdirs-of (io/file steam-path "userdata"))
+           (map #(io/file % "219990" "remote" "save" "main"))
            (filter #(.exists %))
            (map #(.getPath %))))))
 
 (declare get-game-dir)
 
+(def ^:private save-subpath
+  ["Documents" "My Games" "Grim Dawn" "save" "main"])
+
 (defn get-local-save-dir
+  "The save folder under the user's own Documents.
+
+  Grim Dawn always writes saves to \"Documents/My Games/Grim Dawn\" relative to
+  whichever home directory it sees. On Windows that is the real one; under Wine
+  it may instead be the prefix's fake home, which `wine-prefix-save-dirs`
+  covers."
   []
+  (.getPath (apply io/file (u/home-dir) save-subpath)))
 
-  (cond
-    (u/running-osx?)
-    (u/expand-home "~/Dropbox/Public/GrimDawn/main")
-
-    (u/running-linux?)
-    ""
-
-    :else
-    (.getPath (io/file (u/home-dir) "Documents\\My Games\\Grim Dawn\\save\\main"))))
+(defn- wine-prefix-save-dirs
+  "Save folders inside Wine prefixes, where the game puts them on macOS/Linux
+  unless the prefix maps Documents back onto the real home directory."
+  []
+  (for [drive-c (wine-drive-c-dirs)
+        user (or (subdirs-of (io/file drive-c "users")) [])
+        :when (not= "Public" (.getName user))]
+    (.getPath (apply io/file user save-subpath))))
 
 (defn get-save-dir-search-list
   "Returns all possible locations where the save dir might be found.
@@ -112,11 +211,13 @@
   Note that this function respects the :save-dir setting in the user's setting.edn file."
   []
 
-  (cond
-    (u/running-osx?)
-    (clean-list [(get @globals/settings :save-dir) (get-local-save-dir)])
-    :else
-    (clean-list (concat [(get @globals/settings :save-dir) (get-local-save-dir)] (get-steam-cloud-save-dirs)))))
+  ;; Each helper yields nothing on platforms where it doesn't apply:
+  ;; wine prefixes only exist off Windows, Steam Cloud only where the game can
+  ;; actually be installed through Steam.
+  (clean-list (concat [(get @globals/settings :save-dir)
+                       (get-local-save-dir)]
+                      (wine-prefix-save-dirs)
+                      (get-steam-cloud-save-dirs))))
 
 (defn save-dir->mod-save-dir
   [save-dir]
@@ -170,6 +271,11 @@
   []
   (io/file (get-game-dir) "gdx2"))
 
+(defn get-gdx3-dir
+  "Returns the directory for Fangs of Asterkarn dlc."
+  []
+  (io/file (get-game-dir) "gdx3"))
+
 (defn get-mod-dir
   "Returns the configured mod's directory"
   []
@@ -181,6 +287,7 @@
   [(get-game-dir)
    (get-gdx1-dir)
    (get-gdx2-dir)
+   (get-gdx3-dir)
    (get-mod-dir)])
 
 (defn files-with-extension
@@ -205,7 +312,8 @@
   []
   (->> (concat [(io/file (get-game-dir) database-file)
                 (io/file (get-gdx1-dir) "database/GDX1.arz")
-                (io/file (get-gdx2-dir) "database/GDX2.arz")]
+                (io/file (get-gdx2-dir) "database/GDX2.arz")
+                (io/file (get-gdx3-dir) "database/GDX3.arz")]
                [(get-mod-db-file (get-mod-dir))])
        (filter u/path-exists?)
        (into [])))

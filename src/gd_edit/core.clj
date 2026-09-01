@@ -332,6 +332,21 @@
     (u/print-line (yellow build-info))
     (u/print-line (red "No build info available"))))
 
+(defn- log-checked-locations
+  "The search covers Steam libraries, GOG defaults and Wine prefixes, which on
+  some machines is dozens of paths -- far too many to be useful on screen. Print
+  a count and record the full list in the log for anyone diagnosing a miss."
+  [what locations]
+
+  ;; Logged at :info, not :debug -- the default log level is :info, so debug
+  ;; lines would be dropped and the message below would be pointing at nothing.
+  (let [locations (vec locations)]
+    (t/info (str "Searched for " what " in:"))
+    (doseq [loc locations]
+      (t/info (str "    " loc)))
+    (u/print-line (format "Checked %d of the usual locations (see gd-edit.log for the list)."
+                          (count locations)))))
+
 (defn- check-save-dir-found?!
   [verbose]
 
@@ -339,9 +354,8 @@
     (if (empty? save-file-dirs)
       (do
         (u/print-line (red "No save files can be located"))
-        (u/print-line "The following locations were checked:")
-        (doseq [loc (dirs/get-save-dir-search-list)]
-          (u/print-line (str "    " loc)))
+        (log-checked-locations "save files" (dirs/get-save-dir-search-list))
+        (u/print-line "Set your save folder with:    savedir <path to your save folder>")
         false ;; return false to indicate that we failed the test
         )
 
@@ -364,11 +378,10 @@
   (if-not (dirs/get-game-dir)
     (do
       (u/print-line (red "Game directory cannot be located"))
-      (u/print-line "The following locations were checked:")
-      (doseq [dir (dirs/get-game-dir-search-list)]
-              (u/print-line (str "    " dir)))
+      (log-checked-locations "the game installation" (dirs/get-game-dir-search-list))
+      (u/print-line "Set it with:                 gamedir <path to your Grim Dawn folder>")
       (u/newline-)
-      (u/print-line "Some editor functions such as db queries and changing items and equipment won't work properly.")
+      (u/print-line "Until then, editor functions such as db queries and changing items and equipment won't work properly.")
       false)
 
     (do
