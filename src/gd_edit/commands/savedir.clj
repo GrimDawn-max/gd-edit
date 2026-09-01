@@ -35,7 +35,7 @@
         (u/print-line (str "    " loc))))
 
     :else
-    (let [save-dir (first tokens)]
+    (let [save-dir (u/arg->path input)]
 
       (if (empty? save-dir)
         (au/setting-savedir-clear!)

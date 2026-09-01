@@ -42,5 +42,4 @@
     (gamedir-show)
 
     :else
-    (let [game-dir (first tokens)]
-      (gamedir-set game-dir))))
+    (gamedir-set (u/arg->path input))))

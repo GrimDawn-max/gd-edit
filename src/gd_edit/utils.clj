@@ -427,6 +427,19 @@
 ;;------------------------------------------------------------------------------
 ;; Settings file
 ;;------------------------------------------------------------------------------
+(defn arg->path
+  "Interpret a command's whole argument string as a filesystem path.
+
+  Game and save paths are full of spaces -- \"My Games\", \"Grim Dawn\",
+  \"Program Files (x86)\" -- so taking only the first whitespace-separated
+  token silently truncates almost every real path. Take the entire remainder of
+  the line instead, and treat surrounding quotes as optional."
+  [input]
+  (-> (or input "")
+      (str/trim)
+      (str/replace #"^\"|\"$" "")
+      (str/trim)))
+
 (defn settings-file-path
   []
   (.getAbsolutePath (io/file (working-directory) "settings.edn")))
