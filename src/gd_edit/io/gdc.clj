@@ -103,6 +103,70 @@
    :energy                 :float))
 
 
+;; Items are embedded in several different blocks, and the item record itself
+;; changed shape in the Fangs of Asterkarn file format. The version that governs
+;; it belongs to the *enclosing* block, which an item spec cannot reach by
+;; walking the data it has read so far, so the enclosing block records the
+;; version in the encryption context -- that context is threaded through every
+;; read and write at any depth.
+
+(def item-version-foa
+  "Block version at which the item record grew by 4 fields: two ahead of
+  :relic-completion-level and two after :stack-count.
+
+  Blocks holding items were at version 4 (character inventory) or 5 (transfer
+  stash) before this, and all moved to 11."
+  11)
+
+(defn record-item-version!
+  "Called by blocks that embed items, so nested item specs can see the version."
+  [context version]
+  (swap! context assoc :item-version version)
+  version)
+
+(defn after-item-version
+  "Only read/write `spec` when the enclosing block is at `version` or later."
+  [version spec]
+  (s/conditional
+   (fn [_data context]
+     (when (>= (get @context :item-version 0) version)
+       spec))))
+
+;; Block 8's skill records need the same treatment: the version sits on the
+;; block, but the field it gates lives inside each element of the skills array.
+
+(def skill-version-foa
+  "Block 8 version at which each skill record gained one byte after :enabled.
+
+  Observed as 6 on saves written before the expansion and 8 after. Version 7
+  has not been observed, and is treated as the older layout -- gd-edit read
+  1.2-era saves with the 6 layout without trouble, so the change most likely
+  arrived with 8."
+  8)
+
+(defn after-skill-version
+  [version spec]
+  (s/conditional
+   (fn [_data context]
+     (when (>= (get @context :skill-version 0) version)
+       spec))))
+
+(def SkillBlockVersion
+  "Reads/writes block 8's :version, recording it for the nested skill specs."
+  (with-meta '(:skill-version)
+    {:struct/type :skill-version}))
+
+(defmethod s/read-spec :skill-version
+  [_ bb _ context]
+  (let [version (read-int! bb context)]
+    (swap! context assoc :skill-version version)
+    version))
+
+(defmethod s/write-spec :skill-version
+  [_ bb data context]
+  (swap! context assoc :skill-version data)
+  (write-int! bb data context))
+
 (def Item
   (s/struct-def
    :basename       (s/string :ascii)
@@ -120,8 +184,18 @@
    :unknown        :int32
    :augment-seed   :int32
 
+   ;; Zero in every file observed so far; purpose unknown. These sit *ahead* of
+   ;; the two fields below, so reading them as though they were absent silently
+   ;; yields 0 for every relic level and stack count.
+   :v11-unk1       (after-item-version item-version-foa :int32z)
+   :v11-unk2       (after-item-version item-version-foa :int32z)
+
    :relic-completion-level :int32
-   :stack-count            :int32))
+   :stack-count            :int32
+
+   ;; Likewise zero everywhere observed.
+   :v11-unk3       (after-item-version item-version-foa :int32z)
+   :v11-unk4       (after-item-version item-version-foa :int32z)))
 
 (def InventoryItem
   (into Item
@@ -150,7 +224,7 @@
 (defn read-block3
   [^ByteBuffer bb context]
 
-  (let [version (read-int! bb context)
+  (let [version (record-item-version! context (read-int! bb context))
         has-data (read-bool! bb context)]
     (if-not has-data
       {:version           version
@@ -199,6 +273,7 @@
 (defn write-block3
   [^ByteBuffer bb block context]
 
+  (record-item-version! context (:version block))
   (write-int! bb (:version block) context)
   (write-bool! bb (:has-data block) context)
 
@@ -252,12 +327,20 @@
    :width  :int32
    :height :int32
 
-   :items  (s/array StashItem)))
+   :items  (s/array StashItem)
+
+   ;; Fangs of Asterkarn appended this trailer to every stash tab. Zero in every
+   ;; file observed so far; purpose unknown.
+   :v11-unk1 (after-item-version item-version-foa :int32z)
+   :v11-unk2 (after-item-version item-version-foa :int32z)
+   :v11-unk3 (after-item-version item-version-foa :int32z)
+   :v11-unk4 (after-item-version item-version-foa :int32z)
+   :v11-unk5 (after-item-version item-version-foa :int32z)))
 
 (defn read-block4
   [^ByteBuffer bb context]
 
-  (let [version (read-int! bb context)
+  (let [version (record-item-version! context (read-int! bb context))
         stash-count (read-int! bb context)
 
         stashes (reduce (fn  [accum _]
@@ -270,6 +353,7 @@
 (defn write-block4
   [^ByteBuffer bb block context]
 
+  (record-item-version! context (:version block))
   (write-int! bb (:version block) context)
   (write-int! bb (count (:stashes block)) context)
 
@@ -329,6 +413,8 @@
    :skill-name               (s/string :ascii)
    :level                    :int32
    :enabled                  :bool
+   ;; Zero in every skill observed so far; purpose unknown.
+   :v8-unk1                  (after-skill-version skill-version-foa :bytez)
    :devotion-level           :int32
    :devotion-experience      :int32
    :sublevel                 :int32
@@ -347,7 +433,7 @@
 
 (def Block8
   (s/struct-def
-   :version :int32
+   :version SkillBlockVersion
 
    :skills                     (s/array CharacterSkill)
    :masteries-allowed          :int32
@@ -528,6 +614,10 @@
 
    :unique-items-found          :int32
    :randomized-items-found      :int32
+
+   ;; Added by the Fangs of Asterkarn format (block version 12).
+   :16-unk1                     (after-block-version 12 :int32z)
+   :16-unk2                     (after-block-version 12 :int32z)
    {:anchor true}))
 
 
@@ -881,6 +971,27 @@
 (def write-int!   (partial write-and-update-context write-int-))
 (def write-float! (partial write-and-update-context write-float-))
 
+(defn read-int-defaulted
+  [bb context]
+  (read-int! bb context))
+
+(defn write-int-defaulted
+  "Writes an int32, treating a missing value as 0.
+
+  Items built by the editor rather than read off disk won't carry fields that
+  were introduced by a later file format version, so those come through as nil."
+  [bb data context]
+  (write-int! bb (or data 0) context))
+
+(defn read-byte-defaulted
+  [bb context]
+  (read-byte! bb context))
+
+(defn write-byte-defaulted
+  "Writes a byte, treating a missing value as 0. See `write-int-defaulted`."
+  [bb data context]
+  (write-byte! bb (or data 0) context))
+
 (defn make-enc-context
   [enc-state enc-table & [options-map]]
 
@@ -894,6 +1005,8 @@
                          :byte   [:byte    1 read-byte!  write-byte! ]
                          :bool   [:byte    1 read-bool!  write-bool! ]
                          :int32  [:int32   4 read-int!   write-int!  ]
+                         :int32z [:int32z  4 read-int-defaulted write-int-defaulted]
+                         :bytez  [:bytez   1 read-byte-defaulted write-byte-defaulted]
                          :float  [:float   4 read-float! write-float!]}})))
 
 (defn generate-encryption-table

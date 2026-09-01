@@ -28,7 +28,50 @@
   [spec bb data context]
   (gdc/write-block bb data context spec))
 
+(def foa-stash-version
+  "Stash block version introduced by the Fangs of Asterkarn expansion (gdx3).
+
+  Files written before it are version 5. Version 11 appended a 5 field trailer
+  to each sack; the matching item changes live in `gdc/Item`, gated on
+  `gdc/item-version-foa`."
+  11)
+
+;; The version of the stash block lives in block 18, but the fields it gates
+;; live further down, nested inside the sacks and their items. Neither
+;; `after-block-version` (which reads the version out of the struct currently
+;; being read) nor the anchor stack can see across that nesting, so the version
+;; is recorded in the encryption context instead: that context atom is threaded
+;; through every read and write, at any depth.
+
+(def StashVersion
+  (with-meta '(:stash-version)
+    {:struct/type :stash-version}))
+
+(defmethod s/read-spec :stash-version
+  [_ bb _ context]
+  (let [version (gdc/read-int! bb context)]
+    (swap! context assoc :stash-version version)
+    ;; the items nested below are governed by this same version
+    (gdc/record-item-version! context version)
+    version))
+
+(defmethod s/write-spec :stash-version
+  [_ bb data context]
+  (swap! context assoc :stash-version data)
+  (gdc/record-item-version! context data)
+  (gdc/write-int! bb data context))
+
+(defn after-stash-version
+  "Only read/write `spec` when the stash file is at version `version` or later."
+  [version spec]
+  (s/conditional
+   (fn [_data context]
+     (when (>= (get @context :stash-version 0) version)
+       spec))))
+
 (def TransferStashItem
+  ;; The 4 fields Fangs of Asterkarn added live inside `gdc/Item` itself, which
+  ;; is why an unpatched editor reads X/Y as zero for every stash item.
   (into gdc/Item
         (s/struct-def
          :X :float
@@ -38,11 +81,18 @@
   (s/struct-def
    :width           :int32
    :height          :int32
-   :inventory-items (s/array TransferStashItem)))
+   :inventory-items (s/array TransferStashItem)
+   ;; Fangs of Asterkarn appended this trailer to every sack. Zero in every
+   ;; file observed so far; purpose unknown.
+   :v11-sack-unk1   (after-stash-version foa-stash-version :int32z)
+   :v11-sack-unk2   (after-stash-version foa-stash-version :int32z)
+   :v11-sack-unk3   (after-stash-version foa-stash-version :int32z)
+   :v11-sack-unk4   (after-stash-version foa-stash-version :int32z)
+   :v11-sack-unk5   (after-stash-version foa-stash-version :int32z)))
 
 (def Block18
   (s/struct-def
-   :version   :int32
+   :version   StashVersion
    :unknown   :int32-
    :mod       (s/string :ascii)
    :expansion-status :byte
@@ -85,7 +135,11 @@
         enc-table (gdc/generate-encryption-table seed)
         enc-context (make-enc-context seed enc-table {:direction :write})]
 
-    (.putInt bb (bit-xor seed 1431655765))  ;; enc key
+    ;; enc key. The seed is held as an unsigned 32 bit quantity in a long, so
+    ;; mask back down to 32 bits before writing -- otherwise any seed with the
+    ;; high bit set is out of range for .putInt.
+    (.putInt bb (.intValue (bit-and 0x00000000ffffffff
+                                    (bit-xor seed 1431655765))))
     (gdc/write-int! bb 2 enc-context)       ;; magic number
 
     (gdc/write-block bb stash enc-context {18 Block18})
