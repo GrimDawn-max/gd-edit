@@ -21,8 +21,13 @@
 
   ;; While this is certainly faster...
   ;; It's unknown if all the file chunks always have the same decompressed size
+  ;;
+  ;; `quot` rather than `unchecked-divide-int`: a record's decompressed contents
+  ;; can be larger than Integer/MAX_VALUE, and narrowing the position to an int
+  ;; throws. Fangs of Asterkarn's gdx3 Levels.arc holds a ~2.5GB world001.map,
+  ;; which is what first pushed this past the limit.
   (nth file-parts
-       (unchecked-divide-int target-pos (:decompressed-size (first file-parts)))))
+       (quot target-pos (:decompressed-size (first file-parts)))))
 
 (defn file-part-loaded?
   [reader file-part]
