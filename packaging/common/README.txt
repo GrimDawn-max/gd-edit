@@ -67,9 +67,26 @@ RUNNING
   Linux      Run ./gd-edit.sh from a terminal
              (mark it executable first if needed: chmod +x gd-edit.sh)
 
-On macOS the first launch may be blocked because the app is not signed by an
-identified developer. If that happens, right-click gd-edit.app, choose Open,
-and confirm. You only need to do this once.
+On macOS the first launch is blocked, because the app is not signed by an
+identified developer. Getting past it depends on your macOS version.
+
+  macOS 15 (Sequoia) and newer
+      Double-click gd-edit.app and dismiss the warning -- it will only offer
+      "Move to Trash" or "Done". Then open System Settings > Privacy &
+      Security, scroll down, and click "Open Anyway".
+
+      Control-clicking and choosing Open does NOT work on these versions.
+      Apple removed that shortcut.
+
+  macOS 14 (Sonoma) and older
+      Control-click (or right-click) gd-edit.app, choose Open, then confirm.
+
+Either way you only need to do it once.
+
+If you would rather use the terminal, this clears the warning outright and
+works on every version:
+
+    xattr -dr com.apple.quarantine /path/to/gd-edit.app
 
 
 FIRST RUN: POINTING IT AT YOUR GAME
