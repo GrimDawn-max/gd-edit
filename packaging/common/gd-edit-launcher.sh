@@ -8,6 +8,9 @@ set -u
 
 MIN_JAVA=17
 DOWNLOAD_URL="https://adoptium.net/"
+# Any vendor's build works. Temurin 21 is what gd-edit is tested against; see
+# README.txt for why a newer JDK is not automatically the better choice here.
+RECOMMENDED="Temurin 21 recommended"
 
 # Resolve the directory this script lives in, following symlinks.
 SCRIPT="$0"
@@ -43,10 +46,20 @@ fi
 # what breaks when someone upgrades their JDK.
 JAVA_CMD=""
 
-# A candidate only counts if it actually runs. This matters on macOS, where
-# /usr/bin/java always exists as a stub even with no JDK installed -- accepting
-# it on sight produces Apple's "Unable to locate a Java Runtime" message instead
-# of our own, much clearer one.
+# The first Java seen at any version, so the failure message can name it.
+FOUND_VER=""
+FOUND_AT=""
+
+# A candidate counts only if it actually runs AND is new enough.
+#
+# It has to actually run because on macOS /usr/bin/java always exists as a stub
+# even with no JDK installed -- accepting it on sight produces Apple's "Unable to
+# locate a Java Runtime" message instead of our own, much clearer one.
+#
+# A too-old JDK must not stop the search: installers routinely leave an older
+# `java` ahead of a newer one on PATH (Oracle's java8path shim does exactly this
+# on Windows), and giving up on the first hit would reject a machine that has a
+# perfectly good JDK sitting right there.
 try_java() {
     [ -n "${1:-}" ] || return 1
     case "$1" in
@@ -54,6 +67,24 @@ try_java() {
         *)   command -v "$1" >/dev/null 2>&1 || return 1 ;;
     esac
     "$1" -version >/dev/null 2>&1 || return 1
+
+    # Handles both "1.8.0_451" (old scheme) and "17.0.18" / "21" (current).
+    raw=$("$1" -version 2>&1 | head -n 1 | sed -n 's/.*version "\([^"]*\)".*/\1/p')
+    major=$(echo "$raw" | sed -e 's/^1\.\([0-9]*\).*/\1/' -e 's/^\([0-9]*\).*/\1/')
+
+    if [ -z "$FOUND_VER" ] && [ -n "$raw" ]; then
+        FOUND_VER="$raw"
+        # Resolve a bare name to a full path, so the failure message tells the
+        # user *which* java it found rather than just "java".
+        case "$1" in
+            */*) FOUND_AT="$1" ;;
+            *)   FOUND_AT="$(command -v "$1" 2>/dev/null || echo "$1")" ;;
+        esac
+    fi
+
+    [ -n "$major" ] || return 1
+    [ "$major" -ge "$MIN_JAVA" ] 2>/dev/null || return 1
+
     JAVA_CMD="$1"
     return 0
 }
@@ -87,28 +118,23 @@ fi
 
 if [ -z "$JAVA_CMD" ]; then
     echo ""
-    echo "  gd-edit needs Java $MIN_JAVA or newer, and none could be found."
-    echo ""
-    echo "  Install a free build of Java from:"
-    echo "      $DOWNLOAD_URL"
-    echo ""
-    echo "  Then run this launcher again."
-    echo ""
-    exit 1
-fi
-
-# ------------------------------------------------------------ version check
-# Handles both "1.8.0_452" (old scheme) and "17.0.18" / "21" (current scheme).
-raw=$("$JAVA_CMD" -version 2>&1 | head -n 1 | sed -n 's/.*version "\([^"]*\)".*/\1/p')
-major=$(echo "$raw" | sed -e 's/^1\.\([0-9]*\).*/\1/' -e 's/^\([0-9]*\).*/\1/')
-
-if [ -n "$major" ] && [ "$major" -lt "$MIN_JAVA" ] 2>/dev/null; then
-    echo ""
-    echo "  gd-edit needs Java $MIN_JAVA or newer, but found Java $raw at:"
-    echo "      $JAVA_CMD"
-    echo ""
-    echo "  Install a newer build from:"
-    echo "      $DOWNLOAD_URL"
+    if [ -n "$FOUND_VER" ]; then
+        echo "  gd-edit needs Java $MIN_JAVA or newer, but the only Java found was"
+        echo "  version $FOUND_VER at:"
+        echo "      $FOUND_AT"
+        echo ""
+        echo "  Install Java $MIN_JAVA or newer -- any build will do, for example:"
+        echo "      $DOWNLOAD_URL  ($RECOMMENDED)"
+        echo ""
+        echo "  If you already have one, set JAVA_HOME to point at it."
+    else
+        echo "  gd-edit needs Java $MIN_JAVA or newer, and none could be found."
+        echo ""
+        echo "  Install Java $MIN_JAVA or newer -- any build will do, for example:"
+        echo "      $DOWNLOAD_URL  ($RECOMMENDED)"
+        echo ""
+        echo "  Then run this launcher again."
+    fi
     echo ""
     exit 1
 fi
@@ -122,8 +148,16 @@ if [ -w "$WORKDIR" ]; then
     cd "$WORKDIR"
 fi
 
+# --enable-native-access silences JNI warnings on newer JVMs, but an unrecognised
+# option is fatal, not ignored -- so ask this JVM whether it takes the flag
+# rather than inferring it from the version number.
+NATIVE_ACCESS=""
+if "$JAVA_CMD" --enable-native-access=ALL-UNNAMED -version >/dev/null 2>&1; then
+    NATIVE_ACCESS="--enable-native-access=ALL-UNNAMED"
+fi
+
 exec "$JAVA_CMD" \
     -Xms128m \
     -Djna.nosys=true \
-    --enable-native-access=ALL-UNNAMED \
+    $NATIVE_ACCESS \
     -jar "$JAR" "$@"

@@ -267,17 +267,28 @@
   (io/make-parents dst)
   (io/copy (io/file src) (io/file dst)))
 
+(defn- crlf
+  "Rewrite line endings for text bound for Windows. cmd.exe misparses an LF-only
+  .bat: it fails with \"The filename, directory name, or volume label syntax is
+  incorrect\", which points nowhere near the real cause. Everything we package is
+  authored on macOS, so the conversion has to happen here."
+  [s]
+  (-> s (str/replace "\r\n" "\n") (str/replace "\n" "\r\n")))
+
 (defn- copy-template
-  "Copy a text file, substituting @VERSION@."
-  [src dst]
-  (io/make-parents dst)
-  (spit dst (str/replace (slurp src) "@VERSION@" version)))
+  "Copy a text file, substituting @VERSION@. `xform` rewrites the result, and is
+  where `crlf` gets applied for the Windows dist."
+  ([src dst] (copy-template src dst identity))
+  ([src dst xform]
+   (io/make-parents dst)
+   (spit dst (xform (str/replace (slurp src) "@VERSION@" version)))))
 
 (defn- copy-common-docs
-  [target]
-  (copy-template "packaging/common/README.txt" (str target "/README.txt"))
-  (copy-file "packaging/common/THIRD-PARTY.txt" (str target "/THIRD-PARTY.txt"))
-  (copy-file "LICENSE" (str target "/LICENSE.txt")))
+  ([target] (copy-common-docs target identity))
+  ([target xform]
+   (copy-template "packaging/common/README.txt" (str target "/README.txt") xform)
+   (copy-template "packaging/common/THIRD-PARTY.txt" (str target "/THIRD-PARTY.txt") xform)
+   (copy-template "LICENSE" (str target "/LICENSE.txt") xform)))
 
 (defn- make-executable
   [path]
@@ -333,8 +344,8 @@
   [jar]
   (let [root (str dist-dir "/windows")]
     (copy-file jar (str root "/gd-edit-standalone.jar"))
-    (copy-file "packaging/windows/gd-edit.bat" (str root "/gd-edit.bat"))
-    (copy-common-docs root)
+    (copy-template "packaging/windows/gd-edit.bat" (str root "/gd-edit.bat") crlf)
+    (copy-common-docs root crlf)
     (zip-dir root (format "%s/gd-edit-%s-windows.zip" dist-dir version))))
 
 (defn dist

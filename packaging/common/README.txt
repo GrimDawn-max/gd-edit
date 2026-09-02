@@ -20,16 +20,40 @@ REQUIREMENTS: JAVA
 
 gd-edit needs Java 17 or newer. It is not included in this download.
 
-If you do not already have it, install a free build of Java from:
+If you do not already have it, a free build can be downloaded from:
 
     https://adoptium.net/
 
-Pick the LTS version offered on the front page and run the installer. Any
-recent Java will do -- Temurin, Zulu, Corretto, or the one from your Linux
-package manager. You do not need to keep it updated for gd-edit to keep
-working, and updating it will not break gd-edit.
+Any vendor's build will do -- Temurin, Zulu, Corretto, Oracle, or the one from
+your Linux package manager. Nothing here is tied to a particular vendor.
 
-If Java is missing, the launcher will say so rather than failing cryptically.
+WHICH VERSION: Temurin 21 is recommended. It is the version gd-edit is tested
+against. Note that the newest release is not automatically the best choice --
+gd-edit uses some long-standing native libraries, and each new Java release
+tightens the rules around those. Java 17 and 21 are both known to work.
+
+On the download page, take the JDK, x64, .msi installer. A JRE is technically
+enough to run gd-edit, but Adoptium does not publish one for every version, so
+the JDK is the simpler choice.
+
+WINDOWS INSTALLER OPTIONS: the Temurin installer leaves some features switched
+off by default. Turn on both of these:
+
+    Set JAVA_HOME variable
+    Add to PATH
+
+JAVA_HOME is the important one. gd-edit checks it first, so setting it means
+gd-edit finds the right Java even if an older one is already on your PATH --
+which is common on Windows, where Oracle's Java 8 shim is often still present
+from some other program.
+
+(You do not need the "JavaSoft (Oracle) registry keys" option. gd-edit does not
+read the registry.)
+
+You do not need to keep Java updated for gd-edit to keep working.
+
+If Java is missing or too old, the launcher will say so -- and name the version
+it found and where -- rather than failing cryptically.
 
 
 RUNNING

@@ -318,6 +318,35 @@
        (filter u/path-exists?)
        (into [])))
 
+(defn resolve-file
+  "Resolve `relative-path` against `dir`, falling back to a case-insensitive match
+  on each path segment when the exact path does not exist.
+
+  Grim Dawn is not consistent about the case of its asset filenames. gdx3 ships
+  `resources/levels.arc`, `resources/items.arc` and `resources/text_en.arc`, where
+  the base game, gdx1 and gdx2 all ship `Levels.arc`, `Items.arc` and `Text_EN.arc`.
+  That difference is invisible on Windows and macOS, whose filesystems are
+  case-insensitive by default, but on Linux it silently drops every Fangs of
+  Asterkarn asset -- taking the expansion's shrine names, item names and textures
+  with it. `load-shrines-and-gates` swallows the resulting failure, so the only
+  symptom is missing data.
+
+  Returns a java.io.File, or nil when nothing matches. The exact path is tried
+  first, so the common case costs no extra IO."
+  [dir relative-path]
+
+  (when dir
+    (let [exact (io/file dir relative-path)]
+      (if (u/path-exists? exact)
+        exact
+        (reduce (fn [^java.io.File parent segment]
+                  (or (->> (.listFiles parent)
+                           (filter #(u/case-insensitive= (.getName ^java.io.File %) segment))
+                           first)
+                      (reduced nil)))
+                (io/file dir)
+                (u/path-components relative-path))))))
+
 (defn get-file-and-overrides
   "Given the relative path of a game asset file, return a vector of all matched files.
 
@@ -332,15 +361,15 @@
     (get-db-file-overrides)
 
     (->> (get-file-override-dirs)
-         (map #(io/file % relative-path))
-         (filter #(u/path-exists? %))
+         (map #(resolve-file % relative-path))
+         (filter some?)
          (into []))))
 
 (defn looks-like-game-dir
   [path]
 
-  (if (and (u/path-exists? (io/file path database-file))
-           (u/path-exists? (io/file path localization-file)))
+  (if (and (resolve-file path database-file)
+           (resolve-file path localization-file))
     true
     false))
 
