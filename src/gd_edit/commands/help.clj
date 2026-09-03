@@ -307,11 +307,19 @@
    ["gate list" "Lists all known rift gates"]
    ["make-char" "Make a local character using a GrimTools character"
     (str/join "\n"
-              ["Syntax: make-char <character-url-or-id>"
+              ["Syntax: make-char <character-url-or-id-or-file>"
                ""
                "Ex: "
                "  make-char https://www.grimtools.com/calc/JVljdR7N"
-               "  make-char JVljdR7N"])]])
+               "  make-char JVljdR7N"
+               ""
+               "If grimtools.com will not answer gd-edit (some connections are"
+               "shown a Cloudflare anti-bot challenge that only a browser can"
+               "clear), open the build data in your browser, save it, and pass"
+               "the saved file instead:"
+               ""
+               "  https://www.grimtools.com/get_build_data.php?id=JVljdR7N"
+               "  make-char /path/to/saved-build.json"])]])
 
 (defn detail-help-text
   [help-item]

@@ -742,13 +742,38 @@
   (u/fetch-json-from-url (str "https://www.grimtools.com/get_build_data.php?id=" character-id)))
 
 
+(defn- gt-character-file
+  "The argument as a local json file, or nil if it does not name one.
+
+  Some users sit behind a Cloudflare anti-bot challenge on grimtools.com that
+  gd-edit cannot clear but their browser can. Accepting a build saved straight
+  from the browser gives them a way through that does not depend on the request
+  ever leaving the app. The path has to actually exist to count -- a character
+  id must never be mistaken for a filename."
+  [url-or-character-id]
+
+  (when (some? url-or-character-id)
+    (let [f (io/file (u/expand-home url-or-character-id))]
+      (when (.isFile f)
+        f))))
+
 (defn create-character-handler
   [[_ [url-or-character-id]]]
 
-  (let [character-id (extract-character-id url-or-character-id)
-        _ (println (str "Fetching character: " character-id))
-        [fetch-duration gt-character-json] (u/timed (fetch-gt-character character-id))
-        _ (println (format "fetching took %.2f seconds" (u/nanotime->secs fetch-duration)))
+  (let [local-file (gt-character-file url-or-character-id)
+
+        [fetch-duration gt-character-json]
+        (if local-file
+          (do
+            (println (str "Reading character: " (.getPath local-file)))
+            (u/timed (u/load-json-file (.getPath local-file))))
+          (let [character-id (extract-character-id url-or-character-id)]
+            (println (str "Fetching character: " character-id))
+            (u/timed (fetch-gt-character character-id))))
+
+        _ (println (format "%s took %.2f seconds"
+                           (if local-file "reading" "fetching")
+                           (u/nanotime->secs fetch-duration)))
         character-filepath (create-character gt-character-json)]
 
     (println)
