@@ -757,6 +757,47 @@
       (when (.isFile f)
         f))))
 
+(defn- print-fetch-blocked-message
+  "Explain a refused fetch and point at the way around it.
+
+  grimtools.com sits behind Cloudflare, which serves an anti-bot challenge to
+  some visitors. Clearing it means running javascript, so a browser passes and
+  gd-edit cannot -- and because the decision is made per visitor and by source
+  address, there is no request gd-edit could make instead that would get
+  through. Saving the build in the browser sidesteps the whole question, so say
+  so here rather than leaving a stack trace as the only clue."
+  [character-id]
+
+  (println)
+  (println "grimtools.com refused the request (HTTP 403).")
+  (println)
+  (println "This is normally Cloudflare's anti-bot check. It cannot be cleared from")
+  (println "inside gd-edit, but your browser can clear it. To work around it, open")
+  (println "this address in your browser and save the page:")
+  (println)
+  (println (str "    https://www.grimtools.com/get_build_data.php?id=" character-id))
+  (println)
+  (println "then hand the saved file to make-char:")
+  (println)
+  (println "    make-char <path-to-saved-file>")
+  (println))
+
+(defn- fetch-gt-character-or-explain
+  "Fetch the character, or explain a 403 and return nil.
+
+  Only 403 is handled: anything else is a fault worth seeing in full, and
+  swallowing it would hide real breakage behind advice that does not apply."
+  [character-id]
+
+  (try
+    (fetch-gt-character character-id)
+    (catch clojure.lang.ExceptionInfo e
+      (if (= 403 (:status (ex-data e)))
+        (do
+          (print-fetch-blocked-message character-id)
+          nil)
+        (throw e)))))
+
 (defn create-character-handler
   [[_ [url-or-character-id]]]
 
@@ -769,16 +810,21 @@
             (u/timed (u/load-json-file (.getPath local-file))))
           (let [character-id (extract-character-id url-or-character-id)]
             (println (str "Fetching character: " character-id))
-            (u/timed (fetch-gt-character character-id))))
+            (u/timed (fetch-gt-character-or-explain character-id))))]
 
-        _ (println (format "%s took %.2f seconds"
-                           (if local-file "reading" "fetching")
-                           (u/nanotime->secs fetch-duration)))
-        character-filepath (create-character gt-character-json)]
+    (when (some? gt-character-json)
+      (println (format "%s took %.2f seconds"
+                       (if local-file "reading" "fetching")
+                       (u/nanotime->secs fetch-duration)))
 
-    (println)
-    (println "Loading newly created character...")
-    (au/load-character-file character-filepath)))
+      ;; create-character returns nil when the json is not a grimtools
+      ;; character, having already said so. Loading nil would turn that clear
+      ;; message into an exception, which matters more now that make-char takes
+      ;; files and can be handed the wrong one.
+      (when-let [character-filepath (create-character gt-character-json)]
+        (println)
+        (println "Loading newly created character...")
+        (au/load-character-file character-filepath)))))
 
 
 (comment
