@@ -23,6 +23,43 @@
 (def basis (b/create-basis {:project "deps.edn"}))
 (def uber-file (format "target/%s-standalone.jar" (name project) version))
 
+(def build-java
+  "The JDK gd-edit must be built with, which is the oldest JVM it supports.
+
+  Clojure compiles ahead of time, so the bytecode in the uberjar is shaped by
+  whichever JDK produced it, not by whichever JDK later runs it. Building on a
+  newer release silently bakes in classes the older ones do not have:
+  instaparse's FlattenOnDemandVector implements java.util.List, which on JDK 21
+  extends java.util.SequencedCollection, and the resulting jar then dies at
+  startup with NoClassDefFoundError for everyone on 17. Nothing about that
+  failure points at the machine that built it, which is why this is checked
+  here rather than left to whoever runs the build remembering."
+  17)
+
+(defn- verify-build-jdk
+  "Refuse to build on anything but the supported floor.
+
+  Deliberately the first thing a build does, before target/ is touched, so a
+  wrong JDK costs nothing but the message."
+  []
+
+  (let [running (System/getProperty "java.specification.version")]
+    (when (not= running (str build-java))
+      (binding [*out* *err*]
+        (println)
+        (println (format "  Cannot build: gd-edit must be built with JDK %d, but this is JDK %s."
+                         build-java running))
+        (println)
+        (println "  Clojure compiles ahead of time, so a jar built on a newer JDK can")
+        (println "  reference classes that do not exist on older ones. It will look fine")
+        (println "  here and fail at startup for anyone running the oldest supported JDK.")
+        (println)
+        (println "  Build with:")
+        (println (format "      JAVA_HOME=$(/usr/libexec/java_home -v %d) clojure -T:build dist"
+                         build-java))
+        (println))
+      (System/exit 1))))
+
 (defn shell
   [cmd-str]
   (apply clojure.java.shell/sh (str/split cmd-str #" ")))
@@ -207,6 +244,7 @@
 
 (defn uber
   [_]
+  (verify-build-jdk)
   (clean nil)
 
   ;; Pack build info as "build.edn" with the jar
