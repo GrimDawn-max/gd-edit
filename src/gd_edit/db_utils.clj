@@ -469,6 +469,25 @@
                          (str "  true  - " (str/join ", " true-aliases))
                          (str "  false - " (str/join ", " false-aliases))]))))))
 
+(defn- parse-int32
+  "Parse a 32 bit integer, accepting the unsigned range as well as the signed one.
+
+  Some int32 fields are unsigned as far as the game is concerned -- item seeds
+  most of all. Those run to 4294967295 and every external seed tool quotes them
+  in that form, while Integer/parseInt stops at 2147483647, so half of all valid
+  seeds could not be typed in at all. A value above the signed limit is wrapped
+  to the negative int sharing its bit pattern, which is exactly what the save
+  file holds and what the game reads back out.
+
+  Anything that is not a 32 bit quantity at all still throws, so genuinely bad
+  input keeps failing rather than silently becoming some other number."
+  [val-str]
+
+  (try
+    (Integer/parseInt val-str)
+    (catch NumberFormatException _
+      (Integer/parseUnsignedInt val-str))))
+
 (defn coerce-str-to-type
   "Given an value as a string, return the value after coercing it to the correct type."
   [val-str type]
@@ -491,7 +510,7 @@
       (Short/parseShort val-str)
 
       (= java.lang.Integer type)
-      (Integer/parseInt val-str)
+      (parse-int32 val-str)
 
       (= java.lang.Long type)
       (Long/parseLong  val-str)
