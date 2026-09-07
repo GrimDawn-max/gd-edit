@@ -10,6 +10,8 @@
             [gd-edit.commands.item :as item]
             [gd-edit.commands.level :as level]
             [gd-edit.db-utils :as dbu]
+            [gd-edit.max-rolls :as max-rolls]
+            [gd-edit.item-stats :as item-stats]
             [clojure.java.io :as io]
 
             [clojure.pprint :refer [pprint]]
@@ -409,6 +411,19 @@
                   :augment :augment-name
                   :relicBonus :relic-bonus}
 
+        ;; GrimTools does not currently export Fangs of Asterkarn ascended
+        ;; bonuses, and the item spec is open, so if that ever changes the field
+        ;; would validate happily and then be dropped here without a word --
+        ;; producing a character that looks right and is quietly missing a stat
+        ;; source. Say so instead. gd-edit can read and write :ascended-name, so
+        ;; supporting it would only mean adding it to the mapping above.
+        _ (doseq [k (keys gt-character-data-equipment)
+                  :when (and (not (contains? mappings k))
+                             (re-find #"(?i)ascend" (name k)))]
+            (println (format "Note: this character has an item field \"%s\" that gd-edit does not import."
+                             (name k)))
+            (println "      The ascended bonus on that item will be missing."))
+
         ;; Translate the gt equipment into a gdc item
         item (reduce (fn [item [def-k new-val]]
                        (cond-> item
@@ -655,11 +670,67 @@
 
 
 
+(defn- equipped-items
+  "Every path into the character that holds a real equipped item.
+
+  Weapon sets are separate from the equipment list, and both can hold blanks, so
+  the paths are gathered rather than assumed."
+  [character]
+  (concat
+   (for [i (range (count (:equipment character)))
+         :when (not= "" (str (get-in character [:equipment i :basename])))]
+     [:equipment i])
+   (for [ws (range (count (:weapon-sets character)))
+         i (range (count (get-in character [:weapon-sets ws :items])))
+         :when (not= "" (str (get-in character [:weapon-sets ws :items i :basename])))]
+     [:weapon-sets ws :items i])))
+
+(defn maximise-rolls
+  "Give every equipped item the seed that rolls its stats highest.
+
+  GrimTools says which items a build uses but nothing about how they rolled, so
+  make-char assigns each a random seed -- a legitimate item, but an average one.
+  This replaces those with the best seed each item can have.
+
+  It is deliberately not the default: a character whose every item rolled
+  perfectly is obviously not one that was played for, and that should be the
+  caller's choice rather than something that happens quietly."
+  [character]
+  (let [paths (vec (equipped-items character))]
+    (if (empty? paths)
+      character
+      (do
+        (println)
+        (println (format "Maximising rolls on %d items. Each is a full sweep of all"
+                         (count paths)))
+        (println (format "%,d seeds, so this takes a while." 2147483647))
+        (println)
+        (let [t0 (System/nanoTime)
+              result (reduce
+                      (fn [ch [i path]]
+                        (let [item (get-in ch path)
+                              nm (or (dbu/item-name item (dbu/db-and-index))
+                                     (:basename item))]
+                          (print (format "  [%d/%d] %s ... " (inc i) (count paths) nm))
+                          (flush)
+                          (let [t (System/nanoTime)
+                                better (max-rolls/maximise item)
+                                secs (/ (- (System/nanoTime) t) 1e9)]
+                            (println (if (= (:seed better) (:seed item))
+                                       "no better seed found"
+                                       (format "seed %d  (%.0fs)" (:seed better) secs)))
+                            (assoc-in ch path better))))
+                      character
+                      (map-indexed vector paths))]
+          (println)
+          (println (format "Done in %.0f seconds." (/ (- (System/nanoTime) t0) 1e9)))
+          result)))))
+
 (defn create-character-
   "Take the json file, recreate the character using a template, then move the character to
   the local save directory
   "
-  [gt-character-root]
+  [gt-character-root & {:keys [max-rolls?]}]
   (let [;; Copy the template character directory to a temporary location on disk
         tmp-dir (fs/temp-dir "gd-edit-char")
         _ (u/copy-resource-files-recursive "_blank_character" tmp-dir)
@@ -669,7 +740,8 @@
         template-character (gdc/load-character-file character-file)
 
         ;; Create a new character from the template
-        new-character (gt-apply-character (:data gt-character-root) template-character)
+        new-character (cond-> (gt-apply-character (:data gt-character-root) template-character)
+                        max-rolls? maximise-rolls)
 
         ;; Save it back into the template files directory
         _ (gdc/write-character-file new-character character-file)
@@ -703,12 +775,12 @@
   "Take the json file, recreate the character using a template, then move the character to
   the local save directory
   "
-  [gt-character-root]
+  [gt-character-root & {:keys [max-rolls?]}]
   (if-not (spec/valid? :gt-char/data (:data gt-character-root))
     (do
       (println "Input doesn't look like a valid grimtools character file")
       nil)
-    (create-character- gt-character-root)))
+    (create-character- gt-character-root :max-rolls? max-rolls?)))
 
 (defn create-character-from-str
   "Take the json file, recreate the character using a template, then move the character to
@@ -799,9 +871,18 @@
         (throw e)))))
 
 (defn create-character-handler
-  [[_ [url-or-character-id]]]
+  [[_ tokens]]
 
-  (let [local-file (gt-character-file url-or-character-id)
+  (let [flag? (fn [t] (#{"--max-rolls" "-max-rolls" "--maxrolls"} (str/lower-case (str t))))
+        max-rolls? (boolean (some flag? tokens))
+        url-or-character-id (first (remove flag? tokens))
+        max-rolls? (if (and max-rolls? (not (item-stats/available?)))
+                     (do (println "--max-rolls needs the item stat engine, which this build does not have.")
+                         (println "Creating the character with ordinary random rolls instead.")
+                         (println)
+                         false)
+                     max-rolls?)
+        local-file (gt-character-file url-or-character-id)
 
         [fetch-duration gt-character-json]
         (if local-file
@@ -821,7 +902,8 @@
       ;; character, having already said so. Loading nil would turn that clear
       ;; message into an exception, which matters more now that make-char takes
       ;; files and can be handed the wrong one.
-      (when-let [character-filepath (create-character gt-character-json)]
+      (when-let [character-filepath (create-character gt-character-json
+                                                      :max-rolls? max-rolls?)]
         (println)
         (println "Loading newly created character...")
         (au/load-character-file character-filepath)))))
