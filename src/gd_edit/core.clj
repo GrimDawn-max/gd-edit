@@ -430,29 +430,48 @@
       true
       false)))
 
+(defn- version-notice
+  "The \"newer release\" message for `tag`, or nil when it is not ahead of us."
+  [tag]
+  (when (and tag (su/newer-than-running? tag))
+    (green
+     (str/join "\n"
+               [(format "A newer release is available: %s   (you have %s)"
+                        tag (:version (su/get-build-info)))
+                (str "    " su/releases-url)
+                "Download it and unzip it over your current folder."]))))
+
 (defn- notify-repl-if-latest-version-available
-  "Check if the latest version is available.
-  If so, send a notification to the repl.
-  If not, do nothing."
+  "Tell the user if a newer release exists.
+
+  Two separate concerns here, which the previous version conflated:
+
+  How often we *ask GitHub* is throttled to once a day -- there is no reason to
+  hit the network more than that. How often we *tell the user* is every launch
+  until they upgrade, because a notice shown once and then suppressed for
+  twenty-four hours is one they will miss. The answer is remembered in settings,
+  so the reminder costs nothing after the first check.
+
+  The check runs on its own thread so a slow or unreachable network cannot hold
+  up startup, but we wait a moment for it: printed here it lands with the rest
+  of the startup output, whereas the notification channel is only polled at a
+  prompt -- so a notice that arrived even slightly late used to appear after the
+  user had already typed their first command."
   []
 
-  ;; We want to throttle update checks to some sane interval
-  ;; Check if we should actually check for an update
-  (when (should-check-for-update? (:last-version-check @globals/settings))
+  (let [known (:latest-known-release @globals/settings)
+        tag (if-not (should-check-for-update? (:last-version-check @globals/settings))
+              known
+              (let [checking (future (su/fetch-latest-release-tag))]
+                (swap! globals/settings assoc :last-version-check (Date.))
+                ;; Remember whatever comes back, even if we stopped waiting for it.
+                (thread (when-let [t (deref checking)]
+                          (swap! globals/settings assoc :latest-known-release t)))
+                (or (deref checking 2500 nil) known)))]
 
-    ;; Check if there is a new version available
-    (let [[status tag] (su/fetch-has-new-version?)]
-
-      ;; Update the last check time in the settings file
-      (swap! globals/settings assoc :last-version-check (Date.))
-
-      ;; Notify the user there is a new version
-      (when (= status :new-version-available)
-        (>!! globals/notification-chan
-             (green
-              (str/join "\n"
-                        [(format "A newer release is available: %s" tag)
-                         (str "    " su/releases-url)])))))))
+    (when-let [notice (version-notice tag)]
+      (u/print-line notice)
+      (u/print-line))))
 
 (defn setup-log
   ([]
@@ -621,7 +640,7 @@
   (initialize)
   (u/print-line "Need help? Check the docs!\n\thttps://grimdawn-max.github.io/gd-edit/\n")
 
-  (thread (notify-repl-if-latest-version-available))
+  (notify-repl-if-latest-version-available)
 
   (repl))
 

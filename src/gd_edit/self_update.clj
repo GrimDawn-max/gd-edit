@@ -7,8 +7,12 @@
   (:import java.io.IOException))
 
 (defn fetch-url [url-str]
+  ;; Bounded on purpose. This runs at startup, and an unreachable or captive
+  ;; network must not leave the check hanging around for the life of the session.
   (let [response (client/get url-str
-                             {:headers {"User-Agent" "curl/7.43.0"}})]
+                             {:headers {"User-Agent" "curl/7.43.0"}
+                              :connection-timeout 3000
+                              :socket-timeout 3000})]
     (if (not= (response :status) 200)
       (throw (IOException. (str "Got response status:" (response :status))))
 
@@ -49,15 +53,19 @@
   [s]
   (when s (mapv #(Long/parseLong %) (re-seq #"\d+" s))))
 
+(defn newer-than-running?
+  "Whether `tag` names a release later than the build we are."
+  [tag]
+  (let [latest  (version-of tag)
+        running (version-of (:version (get-build-info)))]
+    (boolean (and latest running (pos? (compare latest running))))))
+
 (defn newer-release-available?
   "The newest release tag if it is ahead of what is running, otherwise nil."
   []
   (when-let [tag (fetch-latest-release-tag)]
-    (let [current (:version (get-build-info))
-          latest  (version-of tag)
-          running (version-of current)]
-      (when (and latest running (pos? (compare latest running)))
-        tag))))
+    (when (newer-than-running? tag)
+      tag)))
 
 (defn fetch-has-new-version?
   "Whether a newer release exists.
