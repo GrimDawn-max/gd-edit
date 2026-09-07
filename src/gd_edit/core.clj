@@ -441,7 +441,7 @@
   (when (should-check-for-update? (:last-version-check @globals/settings))
 
     ;; Check if there is a new version available
-    (let [[status build-info] (su/fetch-has-new-version?)]
+    (let [[status tag] (su/fetch-has-new-version?)]
 
       ;; Update the last check time in the settings file
       (swap! globals/settings assoc :last-version-check (Date.))
@@ -451,8 +451,8 @@
         (>!! globals/notification-chan
              (green
               (str/join "\n"
-                        ["New version available!"
-                         "Run the \"update\" command to get it!"])))))))
+                        [(format "A newer release is available: %s" tag)
+                         (str "    " su/releases-url)])))))))
 
 (defn setup-log
   ([]
@@ -578,10 +578,7 @@
 
   ;; Setup the first screen in the program
   ;; based on if a character has already been loaded
-  (commands.choose-character/character-selection-screen!)
-
-  ;; Remove any left over restart scripts from last time we ran "update"
-  (su/cleanup-restart-script))
+  (commands.choose-character/character-selection-screen!))
 
 (defn print-runtime-info
   []
@@ -612,7 +609,7 @@
     (u/print-line)
     (u/print-line "Please download the 64 bit version from here:")
     (u/print-indent 1)
-    (u/print-line "https://java.com/en/download/manual.jsp")
+    (u/print-line "https://adoptium.net/")
     (System/exit 1)))
 
 
@@ -622,7 +619,7 @@
   (exit-unless-64-bit-runtime)
 
   (initialize)
-  (u/print-line "Need help? Check the docs!\n\thttps://odie.github.io/gd-edit-docs/faq/\n")
+  (u/print-line "Need help? Check the docs!\n\thttps://grimdawn-max.github.io/gd-edit/\n")
 
   (thread (notify-repl-if-latest-version-available))
 

@@ -267,7 +267,7 @@
                " skills - remove all masteries & skills and refund skill points spent"
                " devotions - remove all devotions and refund devotion points spent"
                " all - combination of all of the above"])]
-   ["update" "Update to the latest version of gd-edit"]
+   ["update" "Check whether a newer release of gd-edit is available"]
    ["swap-variant" "Swap the item out for one of its variants"
     (str/join "\n"
               ["Syntax: swap-variant <path-to-item> <optional target-type>"
@@ -512,9 +512,9 @@
                           " help <command>"
                           ""
                           "Need more help? Check the docs!"
-                          "\thttps://odie.github.io/gd-edit-docs/faq/"
+                          "\thttps://grimdawn-max.github.io/gd-edit/faq/"
                           "\t   and"
-                          "\thttps://odie.github.io/gd-edit-docs/commands/"
+                          "\thttps://grimdawn-max.github.io/gd-edit/commands/"
                           ])))
 
     :else

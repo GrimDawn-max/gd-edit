@@ -1,25 +1,14 @@
 (ns gd-edit.self-update
+  "Checking whether a newer release of gd-edit exists."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [progress.file :as progress]
             [clj-http.client :as client]
             [gd-edit.utils :as u])
-  (:import java.io.IOException
-           [java.nio.file Files]
-           [java.nio.file CopyOption StandardCopyOption]))
+  (:import java.io.IOException))
 
 (defn fetch-url [url-str]
   (let [response (client/get url-str
                              {:headers {"User-Agent" "curl/7.43.0"}})]
-    (if (not= (response :status) 200)
-      (throw (IOException. (str "Got response status:" (response :status))))
-
-      (response :body))))
-
-(defn fetch-url-as-stream [url-str]
-  (let [response (client/get url-str
-                             {:headers {"User-Agent" "curl/7.43.0"}
-                              :as :stream})]
     (if (not= (response :status) 200)
       (throw (IOException. (str "Got response status:" (response :status))))
 
@@ -31,193 +20,79 @@
   (when-let [info-file (io/resource "build.edn")]
     (edn/read-string (slurp info-file))))
 
-(defn is-newer?
-  "Check if build-a is newer than build-b"
-  [build-a build-b]
+(def releases-url
+  "Where a user gets a newer build."
+  "https://github.com/GrimDawn-max/gd-edit/releases/latest")
 
-  (.isAfter (.toInstant (:timestamp build-a))
-            (.toInstant (:timestamp build-b))))
+(def ^:private releases-api
+  "https://api.github.com/repos/GrimDawn-max/gd-edit/releases/latest")
 
-(defn fetch-latest-build-info
-  "Get the information about the latest available build from network
-  WARNING: This may block for a long time."
+(defn fetch-latest-release-tag
+  "The tag of the newest published release, or nil.
+
+  Replaces the original self-update endpoints, which pointed at the upstream
+  author's Dropbox: this fork would otherwise have checked his builds daily and,
+  on running `update`, downloaded and installed one over itself.
+
+  This only asks what the newest release is. It does not download anything.
+  Self-replacement is not viable here anyway -- a release is a zip holding a
+  launcher and a jar, not the single executable the old mechanism swapped."
   []
-  (let [url (cond
-              (u/running-nix?)
-              "http://tiny.cc/gdednixedn"
+  (try
+    (let [body (fetch-url releases-api)
+          tag  (second (re-find #"\"tag_name\"\s*:\s*\"([^\"]+)\"" body))]
+      (not-empty tag))
+    (catch Throwable _ nil)))
 
-              :else
-              "http://tiny.cc/gdededn")]
+(defn- version-of
+  "The numeric parts of a version string, for comparison. \"v0.2.468\" -> [0 2 468]"
+  [s]
+  (when s (mapv #(Long/parseLong %) (re-seq #"\d+" s))))
 
-    ;; Return the contents of the file to the caller
-    (edn/read-string (fetch-url url))))
-
-(defn fetch-latest-build
-  [build-info]
-  (let [url (cond
-              (u/running-nix?)
-              "http://tiny.cc/gdednixbin"
-
-              :else
-              "http://tiny.cc/gdedexe")
-        file (java.io.File/createTempFile "gd-edit" ".exe")]
-
-    ;; Try to copy the file contents to a temp location
-    (u/print-line "Downloading new version")
-
-    (progress/with-file-progress file :filesize (:filesize build-info)
-      (io/copy (fetch-url-as-stream url) file))
-
-    ;; Return the temp location to caller
-    file))
+(defn newer-release-available?
+  "The newest release tag if it is ahead of what is running, otherwise nil."
+  []
+  (when-let [tag (fetch-latest-release-tag)]
+    (let [current (:version (get-build-info))
+          latest  (version-of tag)
+          running (version-of current)]
+      (when (and latest running (pos? (compare latest running)))
+        tag))))
 
 (defn fetch-has-new-version?
-  "Attempts to fetch the latest version of the program.
-  Returns either:
-    :up-to-date - if already running the latest version
-    :new-version-available - if a later version is available online
+  "Whether a newer release exists.
 
-  Can throw exception. We're performing various networking tasks. Any number of conditions may arise.
-  It's not clear what exactly might be thrown here.
-  It's up to the caller to handle network error conditions."
+  Returns [:new-version-available tag] or [:up-to-date]. Never throws -- the
+  caller runs this on startup, and a network problem should not interrupt
+  someone editing a save file."
   []
-
-  (when-let [latest-build-info (fetch-latest-build-info)]
-    (when-let [current-build-info (get-build-info)]
-      ;; (u/print-line "latest: " latest-build-info)
-      ;; (u/print-line "current: " current-build-info)
-
-      ;; Is the latest build newer than the one we're running?
-      (if-not (is-newer? latest-build-info current-build-info)
-        [:up-to-date]
-        [:new-version-available latest-build-info]))))
-
-(defn fetch-latest-version
-  "Attempts to fetch the latest version of the program.
-  Returns either:
-    :up-to-date - if already running the latest version
-    tempfile - if can be
-
-  Can throw exception. We're performing various networking tasks. Any number of conditions may arise.
-  It's not clear what exactly might be thrown here.
-  It's up to the caller to handle network error conditions."
-  []
-
-  (let [[new-ver-status latest-build-info](fetch-has-new-version?)]
-    (if (=  new-ver-status :new-version-available)
-
-      ;; Try to fetch the latest version
-      (fetch-latest-build latest-build-info)
-
-      ;; Or say that everything is up to date
-      :up-to-date)))
-
-(defn- get-restart-script-file
-  []
-  (io/file (u/working-directory) "restart.bat"))
-
-(defn- restart-for-win
-  [new-exe]
-
-  (u/print-line "Restarting...")
-  (let [running-exe-path (io/file (System/getProperty "java.class.path"))
-        backup-path (io/file (str running-exe-path ".bak"))
-        restart-script-path (get-restart-script-file)]
-
-    ;; Write out the restart script
-    (spit restart-script-path
-     (u/fmt
-      "
-        @echo off
-        echo Preparing to restart gd-edit...
-
-        REM remove old backup file
-        del /F \"#{backup-path}\"
-        if %%ERRORLEVEL%% neq 0 goto backup_error
-
-        REM rename the original exe as a backup
-        move \"#{running-exe-path}\" \"#{backup-path}\"
-        if %%ERRORLEVEL%% neq 0 goto backup_error
-
-        REM move the new exe to where the original exe was
-        move \"#{(str new-exe)}\" \"#{running-exe-path}\"
-        if %%ERRORLEVEL%% neq 0 goto replace_error
-
-        REM finally, start the new version
-        echo Restarting gd-edit...
-        start \"\" \"#{running-exe-path}\"
-        exit 0
-
-        backup_error:
-        echo Could not create backup file. Aborting self update.
-        pause
-        exit 1
-
-        replace_error:
-        echo Could not move new version to correct location.
-        echo Attempting to restore backup.
-        echo If this doesn't work, please manually rename
-        echo #{backup-path} => #{running-exe-path}
-        move #{backup-path} #{running-exe-path}
-        start \"\" \"#{running-exe-path}\"
-        pause
-        exit 1
-      "
-      ))
-    (.setExecutable restart-script-path true)
-
-    ;; Start the restart script
-    (-> (ProcessBuilder. ["cmd.exe" "/C" "start" (str restart-script-path)])
-        (.start))))
-
-(defn- restart-for-nix
-  [new-exe]
-
-  (let [running-exe-path (io/file (System/getProperty "java.class.path"))
-        backup-path (io/file (str running-exe-path ".bak"))]
-
-    ;; Make a backup of the current exe/binary
-    (if-not (.renameTo (io/file running-exe-path) (io/file backup-path))
-      (u/print-line "Sorry. Could not rename the current executable.")
-
-      ;; Replace the current binary with the new one
-      (if-not (Files/move (.toPath (io/file new-exe))
-                          (.toPath (io/file running-exe-path))
-                          (into-array CopyOption [StandardCopyOption/REPLACE_EXISTING]))
-        (u/print-line "Sorry. Could not rename the new version.")
-
-        (do
-          (.setExecutable (io/file running-exe-path) true)
-          (u/print-line "Please restart the editor manually."))))))
-
-(defn- restart-self
-  [new-exe]
-
-  (cond
-    (u/running-nix?)
-    (restart-for-nix new-exe)
-
-    :else
-    (restart-for-win new-exe))
-
-    (System/exit 0))
-
-(defn cleanup-restart-script
-  []
-  (let [resart-script-file (get-restart-script-file)]
-    (when (.exists resart-script-file)
-      (io/delete-file (get-restart-script-file)))))
+  (try
+    (if-let [tag (newer-release-available?)]
+      [:new-version-available tag]
+      [:up-to-date])
+    (catch Throwable _ [:up-to-date])))
 
 (defn try-self-update
-  "Attempts to update the running executable to the latest version.
-  Returns:
-  :up-to-date if the running exe is the latest version
-  attempts to download and restart the program otherwise"
-  []
-  (let [fetch-result (fetch-latest-version)]
-    (cond
-      (instance? java.io.File fetch-result)
-      (restart-self fetch-result)
+  "Tell the user where to get a newer build, if there is one.
 
-      :else
-      fetch-result)))
+  gd-edit no longer updates itself. The original mechanism downloaded a single
+  executable and swapped it in place; a release is now a zip containing a
+  launcher and a jar, so there is nothing equivalent to swap. Replacing that
+  safely -- while the jar is running, across three platforms -- is a great deal
+  of machinery for something a browser does in one click.
+
+  It also pointed at the upstream author's Dropbox, which is still live. Left
+  alone, this fork would have offered to install his 2021 build over itself."
+  []
+  (let [[status tag] (fetch-has-new-version?)]
+    (if (= status :new-version-available)
+      (do
+        (u/print-line (format "A newer release is available: %s" tag))
+        (u/print-line (format "You are running %s" (:version (get-build-info))))
+        (u/print-line)
+        (u/print-line "Download it from:")
+        (u/print-line (str "    " releases-url))
+        (u/print-line)
+        (u/print-line "Unzip it over your current folder, or anywhere you like.")
+        :new-version-available)
+      :up-to-date)))

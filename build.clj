@@ -11,9 +11,7 @@
             )
   (:import [java.nio.file Path Paths]
            [java.io FileOutputStream]
-           [com.dropbox.core DbxRequestConfig]
-           [com.dropbox.core.v2 DbxClientV2]
-           [com.dropbox.core.v2.files WriteMode])
+           )
   )
 
 (def project 'gd-edit)
@@ -420,13 +418,6 @@
 
   (println "\nRelease archives are in" dist-dir))
 
-(defn make-dropbox-client
-  []
-  (let [config (DbxRequestConfig. "GDUploader/0.1" "en_US")
-        dropbox-setting-file (edn/read-string (slurp (io/file ".publish.edn")))]
-    (DbxClientV2. config (:token dropbox-setting-file))))
-
-
 (defn replace-path-extension
   [path new-ext]
 
@@ -442,59 +433,9 @@
       (fs/base-name true)
       (str new-ext)))
 
-(defn upload-bin-edn-pair-to-dropbox
-  [dropbox-client bin-file upload-filename]
-
-  (let [edn-base-name (replace-base-name-extension upload-filename ".edn")]
-
-       ;; Write the gd-editor.exe file
-       (println (format "Uploading %s build..." upload-filename))
-       (with-open [exe-stream (io/input-stream bin-file)]
-         (-> dropbox-client
-             (.files)
-             (.uploadBuilder (str (io/file "/Public/GrimDawn/editor/" upload-filename)))
-             (.withMode WriteMode/OVERWRITE)
-             (.uploadAndFinish exe-stream)))
-
-       ;; Write the gd-editor.edn file to describe the latest version
-       (println (format "Uploading %s edn file..." upload-filename))
-       (-> dropbox-client
-           (.files)
-           (.uploadBuilder (str (io/file "/Public/GrimDawn/editor/" edn-base-name)))
-           (.withMode WriteMode/OVERWRITE)
-           (.uploadAndFinish (-> (make-build-info {:filesize (.length bin-file)
-                                                   :file-sha1 (digest/sha1 bin-file)})
-                                 (pr-str)
-                                 (.getBytes)
-                                 (io/input-stream))))))
-(defn publish
-  "Publish the built windows exe to dropbox"
-  [_]
-
-  (when (git-has-uncommitted-changes)
-    (println "Please don't publish using uncommitted changes.\nThis makes the build info useless for determining what the user is running.")
-    (throw (Throwable. "Should not publish uncommitted changes")))
-
-  (println "Publishing exe to dropbox...")
-
-  (let [{:keys [bin-file exe-file]} (build {})]
-
-    (if-not (and (.exists bin-file)
-                 (.exists exe-file))
-      (println "Not all the files were properly built... aboring")
-
-      (let [client (make-dropbox-client)]
-        ;; Upload the windows exe
-        (upload-bin-edn-pair-to-dropbox client
-                                        exe-file
-                                        "gd-edit.exe")
-
-        ;; Upload wrapped binary suitable for platforms
-        (upload-bin-edn-pair-to-dropbox client
-                                        ;; (io/file (replace-path-extension output-file ""))
-                                        bin-file
-                                        "gd-edit.nix.bin")))))
-
+;; The upstream project published builds to the author's Dropbox and had the app
+;; download them. Releases are now zips attached to a GitHub release, made by
+;; running `dist` and uploading the result -- see docs/RELEASING.md.
 
 (comment
 

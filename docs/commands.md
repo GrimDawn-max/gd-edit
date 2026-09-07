@@ -287,6 +287,9 @@ mod clear                  go back to the base game
 update
 ```
 
+Checks whether a newer release exists and gives you the link. It does not
+download anything — a release is a zip you unzip yourself.
+
 ---
 
 ## Running commands from a file

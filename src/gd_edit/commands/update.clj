@@ -7,4 +7,4 @@
 
   (let [result (su/try-self-update)]
     (when (= result :up-to-date)
-      (u/print-line "Already running latest version"))))
+      (u/print-line "Already running the latest release."))))
