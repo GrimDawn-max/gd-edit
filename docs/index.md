@@ -16,7 +16,7 @@ This build supports the current game including the Fangs of Asterkarn expansion.
 
 Get the latest release for your platform:
 
-[Downloads :material-download:](https://github.com/GrimDawn-max/gd-edit-FoA/releases/latest){ .md-button .md-button--primary }
+[Downloads :material-download:](https://github.com/GrimDawn-max/gd-edit/releases/latest){ .md-button .md-button--primary }
 
 There are three files — `-windows.zip`, `-macos.zip` and `-linux.zip`. Take the
 one for your system.
@@ -129,6 +129,14 @@ the repository does not accept issues.
 It will be updated if a game patch or expansion breaks it. Nothing else is
 promised. If something goes wrong, restore a save backup — which is why the
 warning at the top of this page is there.
+
+## Credit
+
+gd-edit was written by [Odie](https://github.com/Odie/gd-edit). That project has
+not been updated since 2021; this build is a fork of it, kept running against the
+current game and added to since. The original work is Odie's.
+
+Distributed under the Eclipse Public License, the same licence as the original.
 
 ## Other tools
 

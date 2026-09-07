@@ -1,7 +1,7 @@
 site_name: Grim Dawn gd-edit User Documentation
 site_description: A save game editor for Grim Dawn — installation, commands and answers to common questions.
-site_url: https://grimdawn-max.github.io/gd-edit-FoA/
-repo_url: https://github.com/GrimDawn-max/gd-edit-FoA
+site_url: https://grimdawn-max.github.io/gd-edit/
+repo_url: https://github.com/GrimDawn-max/gd-edit
 repo_name: gd-edit
 edit_uri: ""
 
@@ -60,4 +60,4 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/GrimDawn-max/gd-edit-FoA
+      link: https://github.com/GrimDawn-max/gd-edit

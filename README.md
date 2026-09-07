@@ -1,9 +1,19 @@
-# gd-edit FoA
+# gd-edit
 
-gd-edit is a save file editor for the game Grim Dawn.
+A save file editor for the game Grim Dawn.
 
-This fork updates it for the **Fangs of Asterkarn** expansion, which changed the
-save format and broke the original editor.
+**This is a fork of [Odie/gd-edit](https://github.com/Odie/gd-edit).** gd-edit was
+written by Odie, and all of the original work is theirs. That project has not
+been updated since 2021; this fork keeps it running against the current game and
+adds to it. It keeps the original name because it is the same program — not to
+imply any connection to, or endorsement by, the original author.
+
+It was forked to fix the **Fangs of Asterkarn** expansion, which changed the save
+format and broke the original editor, and has since gained real rolled item
+stats, a seed search, ascended affixes and illusion support.
+
+Distributed under the Eclipse Public License, the same licence as the original.
+See [LICENSE](LICENSE).
 
 ## Support: none — and that is deliberate
 

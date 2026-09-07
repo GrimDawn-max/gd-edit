@@ -131,8 +131,21 @@ promised. If something is wrong, back out to a save backup -- that is why the
 section above tells you to keep one.
 
 
+CREDIT
+------
+
+gd-edit was written by Odie:
+
+    https://github.com/Odie/gd-edit
+
+That project has not been updated since 2021. This build is a fork of it, kept
+running against the current game and added to since. The original work is
+Odie's; the faults in this build are not.
+
+
 LICENSE
 -------
 
-gd-edit is distributed under the Eclipse Public License. See LICENSE.txt.
-Third-party components and their licenses are listed in THIRD-PARTY.txt.
+gd-edit is distributed under the Eclipse Public License, the same license as the
+original. See LICENSE.txt. Third-party components and their licenses are listed
+in THIRD-PARTY.txt.
