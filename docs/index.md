@@ -140,11 +140,11 @@ Distributed under the Eclipse Public License, the same licence as the original.
 
 gd-edit is a command line editor. If that is not what you want:
 
-[**GD Stash**](https://forums.crateentertainment.com/t/tool-gd-stash/28422)
+[**GD Stash**](https://forums.crateentertainment.com/t/tool-gd-stash/29036)
 :   A Java application for storing items outside your transfer stash, with
     browsing, filtering and a database of items. Also edits characters.
 
-[**GD Item Assistant**](https://forums.crateentertainment.com/t/tool-item-assistant-for-grim-dawn/20696)
+[**GD Item Assistant**](https://forums.crateentertainment.com/t/tool-grim-dawn-item-assistant/30491)
 :   Stores items beyond the transfer stash, with search and cloud backup. Useful
     if your problem is running out of stash space rather than wanting to edit.
 
