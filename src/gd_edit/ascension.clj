@@ -16,9 +16,14 @@
   names for its category. Anything outside that set is an affix the altar could
   never have produced.
 
-  Ascended affixes do not roll: every record under records/items/lootaffixes/ascended/
-  has zero lootRandomizerJitter, so there is no seed and no range -- the affix is a
-  fixed pick."
+  Ascended affixes do not roll. Across all 993 affix records there is not a single
+  field whose name ends in Max, and the 923 skill-modifier records they point at
+  have only refreshDurationMax, which is a trigger timing rather than a stat. A
+  stat carrying a Min with no matching Max is fixed at that Min, so an ascended
+  bonus is the same every time and the item's seed has no bearing on it.
+
+  (An earlier version of this note credited a zero lootRandomizerJitter. That
+  field is not present on these records at all -- right conclusion, wrong reason.)"
   (:require [gd-edit.db-utils :as dbu]
             [gd-edit.utils :as u]
             [clojure.string :as str]))
