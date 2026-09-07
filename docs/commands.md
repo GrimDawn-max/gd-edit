@@ -94,6 +94,17 @@ Everything GrimTools records about the equipment comes across: items, prefixes
 and suffixes, components, augments, relic completion bonuses and
 [ascended bonuses](#ascended-bonuses).
 
+If GrimTools refuses the request — some connections are shown a Cloudflare
+challenge only a browser can clear — you can save the build from your browser
+and pass the file instead:
+
+```
+make-char ~/Downloads/get_build_data.php.json
+```
+
+The [FAQ](faq.md#make-char-cannot-reach-grimtools) walks through it. Note that
+the file to save is the build *data*, not the calculator page.
+
 `--max-rolls` gives every equipped item the best seed it can have. Without it,
 each item gets a random seed — a legitimate item, but an average one. Each item
 costs a full search, so a set of equipment takes a few minutes.

@@ -261,9 +261,54 @@ where. See [installing Java](index.md#java).
 
 ### make-char cannot reach GrimTools
 
-Some connections are blocked by GrimTools' anti-bot protection, which a browser
-can clear but gd-edit cannot. Open the build in your browser, save the page's
-JSON, and hand the file to `make-char` instead of the link.
+You will see:
+
+```
+grimtools.com refused the request (HTTP 403).
+```
+
+GrimTools sits behind Cloudflare, which shows an anti-bot challenge to some
+visitors. Clearing it requires running javascript, so a browser passes and
+gd-edit cannot — and the decision is made per visitor, so there is no request
+gd-edit could make instead that would get through.
+
+The way round it is to let your browser fetch the build and hand the result to
+gd-edit. Four steps:
+
+**1. Find the build id.** It is the part of the calculator link after `/calc/`:
+
+```
+https://www.grimtools.com/calc/JVljdR7N
+                                ^^^^^^^^ this
+```
+
+**2. Open the build *data* in your browser** — a different address from the
+calculator page:
+
+```
+https://www.grimtools.com/get_build_data.php?id=JVljdR7N
+```
+
+gd-edit prints this exact address when it hits the error, so you can copy it
+from there rather than building it yourself.
+
+You should see a wall of plain text starting `{"data": {"bio": {...` — that is
+the build data. It is not meant to look like the build.
+
+**3. Save that page.** `Cmd`+`S` on macOS, `Ctrl`+`S` on Windows and Linux.
+Anywhere you like, under any name. The extension does not matter.
+
+**4. Give the saved file to `make-char`** in place of the link:
+
+```
+make-char ~/Downloads/get_build_data.php.json
+```
+
+!!! warning "Do not save the calculator page"
+
+    The commonest mistake is saving `.../calc/JVljdR7N` — the page you were
+    looking at. That is the web page, not the data behind it, and `make-char`
+    cannot read it. If you do, gd-edit says so and repeats the right address.
 
 ---
 

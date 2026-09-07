@@ -912,6 +912,36 @@
       (when (.isFile f)
         f))))
 
+(defn- read-saved-build
+  "Read a build saved from the browser, or explain what went wrong.
+
+  The address people are sent to serves JSON, but the obvious mistake is to save
+  the calculator page instead -- that is the page they were looking at, and it is
+  HTML. Parsing it produced \"JSON error (unexpected character: <)\" over a stack
+  trace, which tells someone following the workaround nothing about what they did
+  wrong or how to put it right."
+  [file]
+  (println (str "Reading character: " (.getPath file)))
+  (try
+    (u/load-json-file (.getPath file))
+    (catch Throwable _
+      (let [head (str/triml (slurp file))
+            html? (str/starts-with? head "<")]
+        (println)
+        (println (if html?
+                   "That file is a web page, not build data."
+                   "That file is not the build data gd-edit expects."))
+        (println)
+        (when html?
+          (println "It looks like the calculator page was saved. The build data is served")
+          (println "from a different address -- it shows as plain text, not as the build:")
+          (println)
+          (println "    https://www.grimtools.com/get_build_data.php?id=<build-id>")
+          (println)
+          (println "where <build-id> is the part of the calculator link after /calc/.")
+          (println "Save that page and pass the saved file to make-char."))
+        nil))))
+
 (defn- print-fetch-blocked-message
   "Explain a refused fetch and point at the way around it.
 
@@ -969,9 +999,7 @@
 
         [fetch-duration gt-character-json]
         (if local-file
-          (do
-            (println (str "Reading character: " (.getPath local-file)))
-            (u/timed (u/load-json-file (.getPath local-file))))
+          (u/timed (read-saved-build local-file))
           (let [character-id (extract-character-id url-or-character-id)]
             (println (str "Fetching character: " character-id))
             (u/timed (fetch-gt-character-or-explain character-id))))]
