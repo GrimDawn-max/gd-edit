@@ -6,6 +6,7 @@
             [clojure.string :as str]
             [clojure.set]
             [gd-edit.db-utils :as dbu]
+            [gd-edit.ascension :as ascension]
             [gd-edit.structure-walk :as sw]
             [gd-edit.globals :as globals]
             [gd-edit.utils :as u]
@@ -219,6 +220,23 @@
              (= (last (:actual-path walk-result)) :suffix-name))
             (commands.item/set-affix-handler [input tokens])
 
+            ;; Setting an item's ascended affix. The altar only ever produces
+            ;; affixes drawn from the tables its rarity's blueprint names for that
+            ;; item's category, so anything outside that set is one the game could
+            ;; not have created. Refuse it rather than write an item the game may
+            ;; reject or mis-render.
+            (and
+             (dbu/is-item? (get-in @globals/character (butlast val-path)))
+             (= :ascended-name (last val-path)))
+            (if-let [problem (ascension/validate
+                              (get-in @globals/character (butlast val-path))
+                              (second tokens))]
+              (do (u/print-line (red "Not set."))
+                  (doseq [line (str/split-lines problem)]
+                    (u/print-line line)))
+              (do (swap! globals/character set-character-field val-path (second tokens))
+                  (u/print-line "Ok!")))
+
             (and
              (dbu/is-item? (get-in @globals/character (butlast val-path)))
              (= :relic-name (last val-path)))
@@ -231,7 +249,16 @@
                                    :relic-completion-level)
 
                      ;; to 4
-                     4))
+                     4)
+              ;; ...and give it a seed. Most components carry a completion bonus
+              ;; drawn from a table, which the game selects using relic-seed
+              ;; rather than storing the result -- no real save has relic-bonus
+              ;; set on a component. A seed of 0 is a state no legitimately
+              ;; obtained item is ever in.
+              (swap! globals/character
+                     set-character-field
+                     (path-sibling val-path :relic-seed)
+                     (rand-int Integer/MAX_VALUE)))
 
 
             ;; The user cannot create a collection directly from the commandline.
