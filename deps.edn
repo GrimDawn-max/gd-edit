@@ -24,7 +24,13 @@
         cpath-clj/cpath-clj {:mvn/version "0.1.2"}
         }
  :aliases
- {:build {:deps {io.github.clojure/tools.build {:git/tag "v0.9.0" :git/sha "8c93e0c"}
+ {;; Runs only the namespaces named on the command line. The older test files
+  ;; under test/ predate this and depend on boot and midje, neither of which is
+  ;; a dependency any more, so a blanket runner would fail before reaching
+  ;; anything current.
+  :test {:extra-paths ["test"]}
+
+  :build {:deps {io.github.clojure/tools.build {:git/tag "v0.9.0" :git/sha "8c93e0c"}
                  me.raynes/fs {:mvn/version "1.4.6"}
                  com.dropbox.core/dropbox-core-sdk {:mvn/version "5.4.4"}
                  digest/digest {:mvn/version "1.4.5"}

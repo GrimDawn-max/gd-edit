@@ -242,6 +242,21 @@
   (print-build-stage "Cleaning old build files...")
   (b/delete {:path "target"}))
 
+(defn- compile-stat-engine
+  "Compile the item stat engine into the jar, if its sources are here.
+
+  The engine is a third-party component kept outside version control, so most
+  checkouts will not have it. gd-edit runs either way -- item summaries fall
+  back to unrolled values and seed searching reports itself unavailable -- so
+  its absence is a normal build, not a broken one."
+  []
+  (when (.isDirectory (java.io.File. "java-src"))
+    (print-build-stage "Compiling item stat engine...")
+    (b/javac {:src-dirs ["java-src"]
+              :class-dir class-dir
+              :basis basis
+              :javac-opts ["--release" "17"]})))
+
 (defn uber
   [_]
   (verify-build-jdk)
@@ -255,6 +270,8 @@
   (print-build-stage "Copying sources...")
   (b/copy-dir {:src-dirs ["src" "resources"]
                :target-dir class-dir})
+
+  (compile-stat-engine)
 
   (print-build-stage "Compilng sources...")
   (b/compile-clj {:basis basis
