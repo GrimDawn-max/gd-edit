@@ -1,5 +1,7 @@
 (ns gd-edit.item-summary
   (:require [gd-edit.db-utils :as dbu]
+            [gd-edit.item-stats :as item-stats]
+            [gd-edit.seed-search :as seed-search]
             [clojure.string :as str]
             [gd-edit.equation-eval :as eq]
             [gd-edit.level :as level]
@@ -83,18 +85,35 @@
   [record]
   (letfn [(cost [record cost-record]
             (when-let [subtype (record-class-subtype record)]
-              (let [requirements (->> cost-record
-                                      (filter #(str/starts-with? (key %) subtype))
+              (let [;; Only the three attribute requirements are ever displayed. The
+                    ;; sibling "cost" equation is priced in gold and unused, and on
+                    ;; some records it refers to variables we do not supply --
+                    ;; itemcostformulas_epic.dbr's shieldCostEquation wants
+                    ;; damageAvgBase and shieldBlockChance -- which evaluated to nil
+                    ;; and took the whole item summary down with it.
+                    wanted #{"strength" "dexterity" "intelligence"}
+                    requirements (->> cost-record
+                                      (filter #(and (string? (key %))
+                                                    (str/starts-with? (key %) subtype)
+                                                    (str/ends-with? (key %) "Equation")))
                                       (map (fn [[k equation]]
                                              [(str/lower-case (subs k
                                                                     (count subtype)
                                                                     (- (count k) (count "Equation"))))
-                                              (Math/round (eq/evaluate equation {"itemLevel" (record "itemLevel")
-                                                                                 ;; "totalAttCount" 0
-                                                                                 "totalAttCount" (level/attribute-points-total-at-level (get record "levelRequirement" 1))
-                                                                                 "itemPrefixCost" 0
-                                                                                 "itemSuffixCost" 0
-                                                                                 }))]))
+                                              equation]))
+                                      (filter #(wanted (first %)))
+                                      (map (fn [[name equation]]
+                                             ;; An equation we cannot evaluate costs one
+                                             ;; requirement line, not the whole summary.
+                                             [name (try
+                                                     (Math/round
+                                                      (eq/evaluate equation
+                                                                   {"itemLevel" (record "itemLevel")
+                                                                    "totalAttCount" (level/attribute-points-total-at-level (get record "levelRequirement" 1))
+                                                                    "itemPrefixCost" 0
+                                                                    "itemSuffixCost" 0}))
+                                                     (catch Throwable _ nil))]))
+                                      (remove #(nil? (second %)))
                                       (into {}))]
 
                 [(when-let [strength-req (requirements "strength")]
@@ -155,13 +174,21 @@
        (s/transform [s/ALL :modifier] #(dbu/record-by-name %))))
 
 (defn maybe-choose-by-skill-level
-  "A record field's value may be an array. In that case, a specific value needs to be chosen."
+  "A record field's value may be an array. In that case, a specific value needs to be chosen.
+
+  The index is the skill level, which is not always known: a skill modifier
+  record reached through an item carries its own arrays but nothing saying which
+  rank to read. Falling back to the first entry matches what the game shows in
+  that case -- Mortar Trap's modifier on Anderos' Amplifier holds [100 200] and
+  the game displays 100% -- and it is in any case better than refusing to print
+  the item at all, which is what throwing here used to do."
   [record v]
   (if (vector? v)
-    (or
-     (when-let [skill-level (record "itemSkillLevel")]
-       (nth v skill-level))
-     (throw (ex-info "Cannot select a value from an array" (u/collect-as-map record v))))
+    (let [skill-level (record "itemSkillLevel")]
+      (if (and (integer? skill-level)
+               (< -1 skill-level (count v)))
+        (nth v skill-level)
+        (first v)))
     v))
 
 (defn maybe-resolve-v
@@ -183,9 +210,15 @@
       v)))
 
 (defn range-str
+  "A range as \"low-high\", or just the number when it has collapsed.
+
+  collect-val-range hands back a bare value when a stat's low and high are the
+  same, so anything walking its result has to cope with both shapes. That case
+  used to be rare enough to go unnoticed; showing real rolled values makes a
+  min and max land on the same number far more often."
   [range]
   (yellow
-   (str/join "-" range)))
+   (str/join "-" (if (sequential? range) range [range]))))
 
 (def effect-types
   [{:name "Physical", :type :immediate, :record-ref "Physical"}
@@ -206,6 +239,25 @@
    {:name "Chaos", :type :immediate, :record-ref "Chaos"}
    {:name "Life Leech", :type :immediate, :record-ref "SlowLifeLeach"}
    {:name "Mana Leech", :type :immediate, :record-ref "SlowLifeLeach"}])
+
+(def ^:private damage-type-display
+  "The name the game prints for each damage type the database names differently.
+
+  The database calls Vitality \"Life\" and Vitality Decay \"SlowLife\", so a
+  conversion printed straight from the record reads \"Life Damage converted
+  to...\" where the game says \"Vitality Damage converted to...\"."
+  (into {} (for [{:keys [name record-ref]} effect-types] [record-ref name])))
+
+(defn damage-type-name
+  "A record's damage type as the game names it.
+
+  Conversions can list several types separated by semicolons, so each part is
+  translated and anything unrecognised is passed through unchanged."
+  [t]
+  (when t
+    (->> (str/split (str t) #";")
+         (map #(get damage-type-display % %))
+         (str/join ";"))))
 
 (defn split-camelcase
   [s]
@@ -408,11 +460,18 @@
   (let [components (camelcase->keywords k)
         effect (effect-by-components components)]
     (cond
+      ;; Without a damage type there is no sentence to build -- the line would
+      ;; read "160 null Damage over 2 seconds", which tells a reader less than
+      ;; printing nothing does.
+      (nil? (:name effect))
+      nil
+
       (= [:duration :min] (take-last 2 components))
       (let [key-base (keywords->camelcase (drop-last 2 components))
             duration v ;(maybe-resolve-v record v)
             total-dmg (->> key-base
                            (collect-val-range record)
+                           (#(if (sequential? %) % [%]))
                            (map #(* % duration)))]
 
         (when-not (empty? total-dmg)
@@ -458,6 +517,9 @@
    "characterIntelligence" ["%s Spirit" [:signed]]
    "characterLife" ["%s Health" [:signed]]
    "characterLifeModifier" ["%s Health" [:signed :percentage]]
+   ;; The Energy counterpart was missing, so "+20% Energy" rendered as nothing --
+   ;; noticed on set bonuses, but it affects any item carrying the field.
+   "characterManaModifier" ["%s Energy" [:signed :percentage]]
    "characterLifeRegen" ["%s Health Regenerated per second" [:signed]]
    "characterLifeRegenModifier" ["Increases Health Regeneration by %s" [:percentage]]
    "characterMana" ["%s Energy"]
@@ -467,6 +529,10 @@
    "characterOffensiveAbility" ["%s Offensive Ability" [:signed]]
    "characterSpellCastSpeedModifier" ["%s Casting Speed" [:signed :percentage]]
    "characterStrength" ["%s Physique" [:signed]]
+   "characterOffensiveAbilityModifier" ["%s Offensive Ability" [:signed :percentage]]
+   "characterRunSpeedModifier" ["%s Movement Speed" [:signed :percentage]]
+   "characterDexterityModifier" ["%s Cunning" [:signed :percentage]]
+   "characterIntelligenceModifier" ["%s Spirit" [:signed :percentage]]
    "characterStrengthModifier" ["%s Physique" [:signed :percentage]]
    "characterTotalSpeedModifier" ["%s Total Speed" [:signed :percentage]]
    "damageAbsorptionPercent" ["%s Damage Absorption" [:percentage]]
@@ -517,7 +583,23 @@
     "skillChargeMultipliers"
     })
 
-(defn effect-kv->string
+(def ^:dynamic *pet-bonus*
+  "The rolled Bonus to All Pets for the item being summarized, or nil.
+
+  Bound alongside *stat-ranges* and used only for the item's own pet block; a
+  granted skill's pet bonus is a different record and does not roll from this
+  item's seed."
+  nil)
+
+(def ^:dynamic *stat-ranges*
+  "field -> [low high] for the item being summarized, or nil.
+
+  Bound only while formatting the item's own fields. A granted skill nested in
+  the summary is a different record and its stats do not roll from this item's
+  seed, so it must not borrow these ranges."
+  nil)
+
+(defn effect-kv->string-
   [record [k v :as kv]]
 
   ;; (u/print-line "effect-kv->string:" k)
@@ -541,11 +623,13 @@
 
 
           (str/starts-with? k "conversionInType")
-          (let [idx (subs k (count "conversionInType"))]
-            (format "%s %s Damage converted to %s Damage"
-                    (percentage (lookup-and-resolve record "conversionPercentage"))
-                    (record (str "conversionInType" idx))
-                    (record (str "conversionOutType" idx))))
+          ;; Without a percentage there is no conversion to describe.
+          (when-let [pct (percentage (lookup-and-resolve record "conversionPercentage"))]
+            (let [idx (subs k (count "conversionInType"))]
+              (format "%s %s Damage converted to %s Damage"
+                      pct
+                      (damage-type-name (record (str "conversionInType" idx)))
+                      (damage-type-name (record (str "conversionOutType" idx))))))
           (str/starts-with? k "conversionOutType") nil
           (str/starts-with? k "conversionPercentage") nil
 
@@ -616,9 +700,12 @@
           (= k "offensiveSlowTotalSpeedMin") nil
 
           (= k "offensiveFreezeMin")
-          (format "%s Chance to Freeze target for %s Second"
-                  (percentage (lookup-and-resolve record "offensiveFreezeChance"))
-                  v)
+          ;; The chance is optional. A skill that always freezes simply has no
+          ;; offensiveFreezeChance, and formatting that nil printed the word
+          ;; "null" where the game prints nothing at all.
+          (if-let [chance (percentage (lookup-and-resolve record "offensiveFreezeChance"))]
+            (format "%s Chance to Freeze target for %s Second" chance v)
+            (format "Freeze target for %s Second" v))
           (= k "offensiveSlowColdMin") nil
 
 
@@ -659,6 +746,29 @@
           :else
           (generic-effect-kv->string- record kv))))))
 
+(defn effect-kv->string
+  "The effect line, with the range the value rolled from when we know it.
+
+  Showing 89 alone says nothing about whether 89 was lucky; showing it beside
+  [67-100] is the difference between a number and a judgement, and it is what
+  the game's own tooltip does."
+  [record kv]
+  (let [s (effect-kv->string- record kv)
+        k (first kv)
+        ;; A conversion line is keyed on conversionInType, but the stat that
+        ;; actually rolled is the matching conversionPercentage -- so look the
+        ;; range up under the name it was recorded against.
+        range-key (if (and (string? k) (str/starts-with? k "conversionInType"))
+                    (let [idx (subs k (count "conversionInType"))]
+                      (if (= "" idx) "conversionPercentage" (str "conversionPercentage" idx)))
+                    k)]
+    (if-let [r (and (string? s) (get *stat-ranges* range-key))]
+      (let [[lo hi] r]
+        (if (== (double lo) (double hi))
+          s
+          (format "%s [%s-%s]" s (u/maybe-int lo) (u/maybe-int hi))))
+      s)))
+
 (defn sub-record->string
   [record]
 
@@ -685,8 +795,11 @@
   (flatten
    (for [{:keys [name modifier] :as entry} (skill-modifiers record)]
      (->> (effect-summary modifier (conj recursion-blocks :skill-mods))
-          (map (fn [desc]
-                 (format "%s to %s" desc name)))))))
+          ;; A modifier we have no phrasing for yields nothing rather than the
+          ;; word "null" attached to a skill name.
+          (keep (fn [desc]
+                  (when-not (str/blank? (str desc))
+                    (format "%s to %s" desc name))))))))
 
 (defn effect-display-order
   [key-name]
@@ -729,12 +842,83 @@
                            {"itemLevel" (or (record "itemLevel")
                                             (record "levelRequirement"))})))))
 
+(def ^:private set-level-gates
+  "Set-record fields whose value gates a companion field.
+
+  A set grants skill points, a mastery bonus, a granted skill and a skill modifier
+  at particular piece counts. Each is a name field with no array of its own, paired
+  with a level array that says when it applies -- so the array decides, and nothing
+  has to be guessed.
+
+  The skill and mastery grants are numbered and there can be several: Blazeseer
+  gives three separate +3s at its three-piece tier. Pairing them by index matters
+  -- gating name1 on level1 alone would render the other two as \"+3 to null\"."
+  (merge
+   {"itemSkillLevel"            ["itemSkillName"]
+    "itemSkillModifierControl"  ["modifierSkillName1" "modifiedSkillName1"]}
+   (into {} (for [i (range 1 9)]
+              [(str "augmentSkillLevel" i) [(str "augmentSkillName" i)]]))
+   (into {} (for [i (range 1 9)]
+              [(str "augmentMasteryLevel" i) [(str "augmentMasteryName" i)]]))))
+
+(defn- set-bonus-at
+  "The set's bonuses when exactly `n` pieces are worn.
+
+  Every numeric field on a set record is an array with one entry per set member,
+  so entry (n-1) is the value at n pieces. Values are cumulative rather than
+  additive -- +2000 Health listed at 3, 4 and 5 means +2000 once you reach three,
+  not +6000 at five."
+  [set-record n]
+  (let [at (fn [v] (when (and (sequential? v) (<= n (count v)))
+                     (nth v (dec n))))
+        numeric (into {} (for [[k v] set-record
+                               :when (string? k)
+                               :let [x (at v)]
+                               :when (and (number? x) (not (zero? x)))]
+                           [k x]))
+        ;; carry the name fields whose gate is active at this count
+        names (into {} (for [[gate companions] set-level-gates
+                             :when (contains? numeric gate)
+                             c companions
+                             :let [v (get set-record c)]
+                             :when (string? v)]
+                         [c v]))]
+    (merge numeric names)))
+
+(defn- set-bonus-tiers
+  "Bonuses grouped by the piece count at which each first appears.
+
+  Returns [[n fields] ...]. Listing every count in full would repeat the same
+  lines over and over, since the arrays carry a value forward once it applies;
+  showing only what is new at each tier is both shorter and how the game presents
+  it."
+  [set-record members]
+  (let [n-members (max 1 (count members))]
+    (->> (range 1 (inc n-members))
+         (reduce (fn [{:keys [seen out]} n]
+                   (let [now (set-bonus-at set-record n)
+                         fresh (into {} (remove (fn [[k v]] (= v (get seen k))) now))]
+                     {:seen now
+                      :out (if (seq fresh) (conj out [n fresh]) out)}))
+                 {:seen {} :out []})
+         :out)))
+
 (defn effect-summary
   ([record]
    (effect-summary record #{}))
 
   ([record recursion-blocks]
    ;; (u/print-line "Summarizing: " (:recordname record))
+
+   ;; recursion-blocks is empty only at the top level, which makes it the test
+   ;; for "these fields belong to the item itself".
+   ;;
+   ;; Realized inside the binding, because the result is a lazy sequence and a
+   ;; dynamic binding does not survive into whoever consumes it. Without the
+   ;; doall a component's stats get printed against the item's ranges: the
+   ;; binding has already unwound and the item's are visible again.
+   (binding [*stat-ranges* (when (empty? recursion-blocks) *stat-ranges*)]
+    (doall
 
    ;; Some records require a calculated `itemSkillLevel` to full resolve some of its values
    ;; In these cases, the `v` in the record will be a vector.
@@ -773,9 +957,13 @@
                                    (record "itemSkillLevel")
                                    (assoc "itemSkillLevel" (record "itemSkillLevel")))))
 
-           ;; Additional skills
+           ;; Additional skills. A granted skill without a level has no "+N" to
+           ;; show, and printing "null to Recklessness" is worse than naming the
+           ;; skill on its own.
            (for [skill (augment-skills record)]
-             (format "%s to %s" (signed-number (:level skill)) (:name skill)))
+             (if-let [lvl (signed-number (:level skill))]
+               (format "%s to %s" lvl (:name skill))
+               (:name skill)))
 
            ;; Skill modifications
            (when-not (recursion-blocks :skill-mods)
@@ -797,8 +985,16 @@
              (when-let [pet-bonus-record (dbu/record-by-name (record "petBonusName"))]
                (concat
                 ["" "Bonus to All Pets"]
-                (map indent
-                     (effect-summary pet-bonus-record (conj recursion-blocks :pets))))))
+                ;; A pet bonus rolls from the item's seed, so at the top level
+                ;; the rolled values and their ranges are used. Deeper down the
+                ;; record belongs to a granted skill rather than the item, and
+                ;; *pet-bonus* is nil there, so it prints its own values.
+                (let [pb (when (empty? recursion-blocks) *pet-bonus*)]
+                  (map indent
+                       (binding [*stat-ranges* (:ranges pb)]
+                         (doall
+                          (effect-summary (merge pet-bonus-record (:values pb))
+                                          (if pb #{} (conj recursion-blocks :pets)))))))))) 
 
            (when-not (recursion-blocks :item-skill)
              (when-let [item-skill (dbu/record-by-name (record "itemSkillName"))]
@@ -826,7 +1022,7 @@
 
                  (effect-summary buff-skill (conj recursion-blocks :buff-skill))))))
 
-          (remove nil?)))))
+          (remove nil?)))))))
 
 (defn record-primary-attributes
   [record]
@@ -844,19 +1040,36 @@
 (defn item-summary
   [item]
 
-  (let [base-record (dbu/record-by-name (:basename item))
+  (let [;; Show what the item actually rolled rather than its unrolled base
+        ;; values. Falls back to the plain record when the stat engine is
+        ;; unavailable, so the summary always renders.
+        base-record (-> (dbu/record-by-name (:basename item))
+                        (item-stats/with-rolled-stats item))
         subtype (record-class-subtype base-record)
         item-skill-level (calc-item-skill-level base-record)]
 
-    (->>
+   ;; Ranges are fitted from the record's *base* values, so the plain record has
+   ;; to be used here -- base-record above has the rolled values merged over
+   ;; them and would fit nonsense.
+   (binding [*stat-ranges* (merge (seed-search/stat-ranges (dbu/record-by-name (:basename item)))
+                                  (item-stats/modifier-ranges item))
+             *pet-bonus* (item-stats/pet-bonus (dbu/record-by-name (:basename item)) item)]
+    ;; Realized inside the binding: the summary is a lazy sequence, and a
+    ;; dynamic binding is long gone by the time something else consumes it.
+    (doall
+     (->>
      [;; Name of item
       (yellow (dbu/item-name item))
       (when-let [item-text (base-record "itemText")]
         (u/wrap-line 80 item-text))
 
-      ;; Item classification
-      (let [classifications (conj (into [] (vals (select-keys base-record ["itemClassification" "armorClassification"])))
-                                  (record-class-display-name (base-record "Class")))]
+      ;; Item classification. An ascended item shows "Ascended" in place of its
+      ;; rarity, the way the game's own tooltip does.
+      (let [ascended? (not= "" (str (:ascended-name item)))
+            rarities (if ascended?
+                       ["Ascended"]
+                       (into [] (vals (select-keys base-record ["itemClassification" "armorClassification"]))))
+            classifications (conj rarities (record-class-display-name (base-record "Class")))]
         (str/join " " classifications))
 
       (record-primary-attributes base-record)
@@ -881,6 +1094,57 @@
                           item-skill-level
                           (assoc "itemSkillLevel" item-skill-level))))
 
+      ;; What has been socketed into or applied to the item. These are separate
+      ;; records with their own stats, and the game lists them under the item's
+      ;; own, so they are shown here rather than mixed in above. They are
+      ;; summarized with a non-empty recursion-blocks so they do not borrow the
+      ;; item's rolled ranges -- none of these roll from the item's seed.
+      (when-let [component (dbu/record-by-name (:relic-name item))]
+        ["" (yellow (or (dbu/item-base-record-get-name component) "Component"))
+         (map indent (effect-summary component #{:component}))])
+
+      (when-let [bonus (dbu/record-by-name (:relic-bonus item))]
+        (let [cb (item-stats/completion-bonus item)]
+          ["" (yellow "Completion Bonus")
+           ;; The bonus rolls from the item's seed, so its values are merged in
+           ;; the same way the item's own are, and its ranges are bound so the
+           ;; brackets read like the rest of the summary. An empty
+           ;; recursion-blocks keeps those ranges for the bonus's own fields;
+           ;; anything nested inside it recurses with a non-empty one and loses
+           ;; them, which is what we want.
+           (map indent
+                (binding [*stat-ranges* (:ranges cb)]
+                  (doall (effect-summary (merge bonus (:values cb)) #{}))))]))
+
+      (when-let [augment (dbu/record-by-name (:augment-name item))]
+        ["" (yellow (or (dbu/item-base-record-get-name augment) "Augment"))
+         (map indent (effect-summary augment #{:augment}))])
+
+      ;; The Fangs of Asterkarn ascended affix, applied at the Kurnhold altar.
+      ;; Every record in the ascended pools has zero jitter, so these do not roll
+      ;; and there are no ranges to show -- one fixed affix, chosen at ascension.
+      (when-let [ascended (dbu/record-by-name (:ascended-name item))]
+        ["" (yellow "Ascended Bonus")
+         (map indent (effect-summary ascended #{:ascended}))])
+
+      ;; Set membership. The bonuses are fixed -- they do not roll and are not
+      ;; stored on the item -- but they are the one stat source nothing else here
+      ;; shows, so a build cannot be judged without them.
+      (when-let [set-record (some-> (base-record "itemSetName") not-empty dbu/record-by-name)]
+        (let [members (get set-record "setMembers")
+              members (if (sequential? members) members (when members [members]))
+              tiers (set-bonus-tiers set-record members)]
+          ["" (yellow (str (or (get set-record "setName") "Set")
+                           (format " (%d pieces)" (count members))))
+           (map (fn [m]
+                  (let [nm (or (dbu/item-base-record-get-name (dbu/record-by-name m)) m)]
+                    (indent (if (= m (:basename item)) (str nm "  <- this item") nm))))
+                members)
+           (for [[n fields] tiers]
+             [""
+              (indent (format "%d pieces:" n))
+              (map (comp indent indent) (effect-summary fields #{:set}))])]))
+
       ;; Requirements section
       ""
       (when-let [level-req (base-record "levelRequirement")]
@@ -891,7 +1155,7 @@
       (format "Item Level: %s" (number (base-record "itemLevel")))]
      flatten
      (remove nil?)
-     dedupe)))
+     dedupe)))))
 
 (defn interesting-fields
   [record]
