@@ -320,6 +320,32 @@ set inv/0/items/0/ascended-name records/items/lootaffixes/ascended/mastery/playe
 It refuses an affix the altar could not have produced on that item — the check
 comes from the game's own tables, based on the item's rarity and category.
 
-Worth knowing when choosing: only **Common** and **Magic** items can receive the
-stronger mastery affixes, the ones granting +2 to +4 to a skill. Epic, Rare and
-Legendary items draw from a set that grants the skill modifier alone.
+### Nothing about an ascended bonus is random
+
+An ascended bonus is fixed. Every affix in the game states its numbers outright —
+there is not one value anywhere in the ascended affix data that rolls between a
+minimum and a maximum, and the item's seed has no bearing on it. Two items with
+the same ascended affix have the same bonus, always.
+
+So there is nothing to maximise here, which is why [`find-seed`](#find-seed) asks
+about the ascended bonus *after* it searches: the choice cannot change which seed
+is best.
+
+### Which affixes an item can get
+
+Only **Common** and **Magic** items can receive the mastery affixes that add
+skill levels. Epic, Rare and Legendary items draw from a smaller pool granting
+the skill modifier alone — no skill levels at all.
+
+Where an affix does add skill levels, the amount is a property of that affix, not
+a roll:
+
+| grants | affixes |
+|---|---|
+| +2 to a skill | 310 |
+| +3 to a skill | 161 |
+| +4 to a skill | 168 |
+| +6 to a skill | 1 — Soldier's *Scars of Battle*, the only one in the game |
+
+Picking a different affix is how you get a different number. The same affix always
+gives the same amount.

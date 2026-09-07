@@ -113,6 +113,15 @@ set inv/0/items/0/augment-name records/items/enchants/b227a_enchant.dbr
 [`find-seed`](commands.md#find-seed) offers both while creating an item, which is
 usually easier.
 
+### Can I get the maximum roll on an ascended bonus?
+
+There is no roll to maximise. Ascended affixes are fixed — no value in that data
+rolls between a minimum and a maximum, and the item's seed does not affect them.
+An affix that grants +3 to a skill grants exactly +3, every time.
+
+To get a bigger number you choose a different affix, not a better roll. See
+[ascended bonuses](commands.md#ascended-bonuses).
+
 ### How do I change an item's appearance?
 
 The illusion applied to an item lives in its `transmute-name`:
