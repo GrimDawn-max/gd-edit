@@ -42,7 +42,9 @@
 (s/def :gt-item/component string?)
 (s/def :gt-item/augment string?)
 (s/def :gt-item/relicBonus string?)
-(s/def :gt-char/item (s/keys :opt-un [:gt-item/item :gt-item/prefix :gt-item/suffix :gt-item/component :gt-item/augment :gt-item/relicBonus]))
+(s/def :gt-item/ascendedAffix string?)
+(s/def :gt-char/item (s/keys :opt-un [:gt-item/item :gt-item/prefix :gt-item/suffix :gt-item/component :gt-item/augment :gt-item/relicBonus
+                                    :gt-item/ascendedAffix]))
 
 ;; -------------
 ;;   Equipment

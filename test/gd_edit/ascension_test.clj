@@ -140,3 +140,30 @@
           ;; The altar accepts all gear except relics.
           (is (nil? (ascension/legal-affixes
                      {:basename "records/items/gearrelic/d113_relic.dbr"})))))))
+
+;; A real GrimTools build, saved as a fixture. Every item on it carries an
+;; ascendedAffix, so it is an independent check on legal-affixes: the categories
+;; and tables here were derived from the blueprints alone, and this is the game's
+;; own idea of what goes where. It has already caught two mistakes -- belts being
+;; treated as armour rather than accessories, and two-handed spears not being
+;; classified at all.
+(def ^:private gt-build-fixture "test/resources/gt-build-2mgG9B5Z.json")
+
+(deftest agrees-with-a-real-grimtools-build
+  (if-not (and @db-available? (.exists (io/file gt-build-fixture)))
+    (skip-note "agrees-with-a-real-grimtools-build")
+    (do @loaded
+        (let [read-json (requiring-resolve 'clojure.data.json/read-str)
+              build (read-json (slurp gt-build-fixture) :key-fn keyword)
+              equipment (get-in build [:data :equipment])
+              wrong (for [[slot item] equipment
+                          :let [affix (:ascendedAffix item)]
+                          :when affix
+                          :let [problem (ascension/validate {:basename (:item item)} affix)]
+                          :when problem]
+                      [slot affix (first (str/split-lines problem))])]
+          (testing "every ascended affix GrimTools assigns is one we call legal"
+            (is (empty? wrong) (str "rejected: " (pr-str (vec wrong)))))
+          (testing "the fixture actually exercises something"
+            (is (<= 10 (count (filter :ascendedAffix (vals equipment))))
+                "expected the build to carry ascended affixes on most slots"))))))

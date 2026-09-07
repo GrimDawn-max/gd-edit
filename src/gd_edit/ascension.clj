@@ -37,7 +37,10 @@
    "ArmorProtective_Legs"      "armor"
    "ArmorProtective_Feet"      "armor"
    "ArmorProtective_Hands"     "armor"
-   "ArmorProtective_Waist"     "armor"
+   ;; A belt is an accessory here, not armour, despite its class name -- checked
+   ;; against a GrimTools build whose belt carries ao305b, which appears only in
+   ;; the accessory affix table. Mapping it by the class prefix was wrong.
+   "ArmorProtective_Waist"     "accessory"
    "ArmorJewelry_Medal"        "accessory"
    "ArmorJewelry_Amulet"       "accessory"
    "ArmorJewelry_Ring"         "accessory"
@@ -51,6 +54,7 @@
    "WeaponMelee_Sword2h"       "twoHandMelee"
    "WeaponMelee_Axe2h"         "twoHandMelee"
    "WeaponMelee_Mace2h"        "twoHandMelee"
+   "WeaponMelee_Spear2h"       "twoHandMelee"
    "WeaponHunting_Ranged1h"    "oneHandRanged"
    "WeaponHunting_Ranged2h"    "twoHandRanged"})
 

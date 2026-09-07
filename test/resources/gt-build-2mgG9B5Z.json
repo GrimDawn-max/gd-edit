@@ -1,0 +1,406 @@
+{
+    "data": {
+        "bio": {
+            "level": 100,
+            "attributePoints": 0,
+            "skillPoints": 0,
+            "devotionPoints": 0,
+            "physique": 778,
+            "cunning": 194,
+            "spirit": 50
+        },
+        "equipment": {
+            "amulet": {
+                "item": "records\/items\/gearaccessories\/necklaces\/d318_necklace.dbr",
+                "ascendedAffix": "records\/items\/lootaffixes\/ascended\/ao305b.dbr",
+                "component": "records\/items\/materia\/compa_wardstone.dbr",
+                "augment": "records\/items\/enchants\/b227a_enchant.dbr"
+            },
+            "relic": {
+                "item": "records\/items\/gearrelic\/d010_relic.dbr",
+                "relicBonus": "records\/items\/lootaffixes\/completionrelics\/aarcanist_13a.dbr"
+            },
+            "shoulders": {
+                "item": "records\/items\/gearshoulders\/d111_shoulder.dbr",
+                "ascendedAffix": "records\/items\/lootaffixes\/ascended\/ad302a.dbr",
+                "component": "records\/items\/materia\/compb_livingarmor.dbr",
+                "augment": "records\/items\/enchants\/c206a_enchant.dbr"
+            },
+            "head": {
+                "item": "records\/items\/gearhead\/b004f_head.dbr",
+                "prefix": "records\/items\/lootaffixes\/prefix\/b_ar104_ar_f.dbr",
+                "suffix": "records\/items\/lootaffixes\/suffix\/b_ar024_ar_f.dbr",
+                "ascendedAffix": "records\/items\/lootaffixes\/ascended\/ao308a.dbr",
+                "component": "records\/items\/materia\/compa_runestone.dbr",
+                "augment": "records\/items\/enchants\/c206a_enchant.dbr"
+            },
+            "chest": {
+                "item": "records\/items\/geartorso\/d111_torso.dbr",
+                "ascendedAffix": "records\/items\/lootaffixes\/ascended\/ad302a.dbr",
+                "component": "records\/items\/materia\/compb_livingarmor.dbr",
+                "augment": "records\/items\/enchants\/c206a_enchant.dbr"
+            },
+            "weapon1": {
+                "item": "records\/items\/gearweapons\/guns1h\/b204f_gun1h.dbr",
+                "prefix": "records\/items\/lootaffixes\/prefix\/b_wpn019_melee1h_g.dbr",
+                "suffix": "records\/items\/lootaffixes\/suffix\/b_wpn037_melee1h_g.dbr",
+                "ascendedAffix": "records\/items\/lootaffixes\/ascended\/ao308c.dbr",
+                "component": "records\/items\/materia\/compa_sealresonance.dbr",
+                "augment": "records\/items\/enchants\/b311a_enchant.dbr"
+            },
+            "hands": {
+                "item": "records\/items\/gearhands\/d113_hands.dbr",
+                "ascendedAffix": "records\/items\/lootaffixes\/ascended\/ad302a.dbr",
+                "component": "records\/items\/materia\/compa_spellscorchedplating.dbr",
+                "augment": "records\/items\/enchants\/c208a_enchant.dbr"
+            },
+            "weapon2": {
+                "item": "records\/items\/gearweapons\/guns1h\/b204f_gun1h.dbr",
+                "prefix": "records\/items\/lootaffixes\/prefix\/b_wpn019_melee1h_g.dbr",
+                "suffix": "records\/items\/lootaffixes\/suffix\/b_wpn037_melee1h_g.dbr",
+                "ascendedAffix": "records\/items\/lootaffixes\/ascended\/ao308c.dbr",
+                "component": "records\/items\/materia\/compa_sealresonance.dbr",
+                "augment": "records\/items\/enchants\/b311a_enchant.dbr"
+            },
+            "feet": {
+                "item": "records\/items\/gearfeet\/d111_feet.dbr",
+                "ascendedAffix": "records\/items\/lootaffixes\/ascended\/ad302a.dbr",
+                "component": "records\/items\/materia\/compa_spellscorchedplating.dbr",
+                "augment": "records\/items\/enchants\/c206a_enchant.dbr"
+            },
+            "legs": {
+                "item": "records\/items\/upgraded\/gearlegs\/d006_legs.dbr",
+                "ascendedAffix": "records\/items\/lootaffixes\/ascended\/ad302a.dbr",
+                "component": "records\/items\/materia\/compa_scalyhide.dbr",
+                "augment": "records\/items\/enchants\/c206a_enchant.dbr"
+            },
+            "ring1": {
+                "item": "records\/items\/upgraded\/gearaccessories\/rings\/c050_ring.dbr",
+                "ascendedAffix": "records\/items\/lootaffixes\/ascended\/ao305b.dbr",
+                "component": "records\/items\/materia\/compa_bloodiedcrystal.dbr",
+                "augment": "records\/items\/enchants\/b227a_enchant.dbr"
+            },
+            "ring2": {
+                "item": "records\/items\/awakened\/gearaccessories\/rings\/c206_ring.dbr",
+                "ascendedAffix": "records\/items\/lootaffixes\/ascended\/ao305b.dbr",
+                "component": "records\/items\/materia\/compa_bloodiedcrystal.dbr",
+                "augment": "records\/items\/enchants\/b227a_enchant.dbr"
+            },
+            "medal": {
+                "item": "records\/items\/gearaccessories\/medals\/d107_medal.dbr",
+                "ascendedAffix": "records\/items\/lootaffixes\/ascended\/ao305b.dbr",
+                "component": "records\/items\/materia\/compb_arcanespark.dbr",
+                "augment": "records\/items\/enchants\/runes\/c222_rune.dbr"
+            },
+            "waist": {
+                "item": "records\/items\/gearaccessories\/waist\/d109_waist.dbr",
+                "ascendedAffix": "records\/items\/lootaffixes\/ascended\/ao305b.dbr",
+                "component": "records\/items\/materia\/compa_spellscorchedplating.dbr",
+                "augment": "records\/items\/enchants\/c206a_enchant.dbr"
+            }
+        },
+        "potions": [],
+        "skills": [
+            {
+                "name": "records\/skills\/playerclass05\/_classtraining_class05.dbr",
+                "level": 50
+            },
+            {
+                "name": "records\/skills\/playerclass05\/passive01.dbr",
+                "level": 12
+            },
+            {
+                "name": "records\/skills\/playerclass05\/passive02.dbr",
+                "level": 10
+            },
+            {
+                "name": "records\/skills\/playerclass05\/passive04.dbr",
+                "level": 11
+            },
+            {
+                "name": "records\/skills\/playerclass05\/arcaneshield.dbr",
+                "level": 12
+            },
+            {
+                "name": "records\/skills\/playerclass05\/sphereofprotection1.dbr",
+                "level": 12
+            },
+            {
+                "name": "records\/skills\/playerclass05\/sphereofprotection2.dbr",
+                "level": 10
+            },
+            {
+                "name": "records\/skills\/playerclass05\/mindovermatter1.dbr",
+                "level": 10
+            },
+            {
+                "name": "records\/skills\/playerclass05\/elementalinfusion1.dbr",
+                "level": 12,
+                "autoCastSkill": "records\/skills\/devotion\/tier2_17c_skill.dbr"
+            },
+            {
+                "name": "records\/skills\/playerclass05\/elementalinfusion2.dbr",
+                "level": 12
+            },
+            {
+                "name": "records\/skills\/playerclass05\/elementalinfusion3.dbr",
+                "level": 12
+            },
+            {
+                "name": "records\/skills\/playerclass08\/_classtraining_class08.dbr",
+                "level": 47
+            },
+            {
+                "name": "records\/skills\/playerclass08\/weaponpool01.dbr",
+                "level": 3
+            },
+            {
+                "name": "records\/skills\/playerclass08\/weaponpool02.dbr",
+                "level": 5
+            },
+            {
+                "name": "records\/skills\/playerclass08\/spectralarmor1.dbr",
+                "level": 12
+            },
+            {
+                "name": "records\/skills\/playerclass08\/spectralarmor2.dbr",
+                "level": 10
+            },
+            {
+                "name": "records\/skills\/playerclass08\/soultransfer.dbr",
+                "level": 10
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_11a.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_11b.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_11c.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_15a.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_16a.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_16b.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_16d.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_16c.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_24a.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_24b.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_24c.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_24d.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_31a.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_31b.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_31c.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_31d.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_31e.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_32a.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_32b.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_32d.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_32e.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_32c.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_09a.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_09b.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_09c.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_09d.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_09e.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_09f_skill.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_17a.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_17b.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_17c_skill.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_17d.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_17e.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_19a.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_19b.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_19c.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_19d.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_19e.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_22a.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_22b.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_22f.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_22c.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_22d.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_22e.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_31a.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_31b.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_31c.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_31d.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_31e.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier2_31f.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_15c.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_42a.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_42b.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_42c.dbr",
+                "level": 1
+            },
+            {
+                "name": "records\/skills\/devotion\/tier1_42d.dbr",
+                "level": 1
+            }
+        ],
+        "itemSkills": [
+            {
+                "autoCastSkill": "records\/skills\/devotion\/tier2_09f_skill.dbr",
+                "name": "records\/skills\/itemskillsgdx3\/legendary\/heathentouch.dbr",
+                "itemName": "records\/items\/gearaccessories\/necklaces\/d318_necklace.dbr"
+            }
+        ],
+        "transformSkills": [],
+        "devotionsProgression": [],
+        "skillsProgression": []
+    },
+    "created_for_build": "1.3.0.7"
+}

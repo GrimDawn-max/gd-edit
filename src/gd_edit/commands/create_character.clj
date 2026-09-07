@@ -409,14 +409,13 @@
                   :suffix :suffix-name
                   :component :relic-name
                   :augment :augment-name
-                  :relicBonus :relic-bonus}
+                  :relicBonus :relic-bonus
+                  :ascendedAffix :ascended-name}
 
-        ;; GrimTools does not currently export Fangs of Asterkarn ascended
-        ;; bonuses, and the item spec is open, so if that ever changes the field
-        ;; would validate happily and then be dropped here without a word --
-        ;; producing a character that looks right and is quietly missing a stat
-        ;; source. Say so instead. gd-edit can read and write :ascended-name, so
-        ;; supporting it would only mean adding it to the mapping above.
+        ;; The item spec is open, so an unrecognised field validates happily and
+        ;; is then dropped here without a word -- producing a character that looks
+        ;; right and is quietly missing a stat source. ascendedAffix is imported
+        ;; now, but keep the warning for whatever comes next.
         _ (doseq [k (keys gt-character-data-equipment)
                   :when (and (not (contains? mappings k))
                              (re-find #"(?i)ascend" (name k)))]
