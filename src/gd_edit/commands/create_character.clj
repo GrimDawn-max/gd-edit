@@ -669,6 +669,88 @@
 
 
 
+(def ^:private foa-block-versions
+  "Block versions a Fangs of Asterkarn save carries, as written by the game.
+
+  The blank character shipped in resources predates the expansion and sits at
+  {3 4, 4 6, 8 5, 16 11}. Every field the expansion added is gated on these
+  versions, so a character built from that template cannot carry an ascended
+  affix: the value is set correctly in memory and then silently dropped at
+  serialisation, because the writer is told the block is version 4.
+
+  Grim Dawn upgrades such a save on load, which is why a character made this way
+  looks right afterwards apart from the missing affix."
+  ;; Only block 3 is raised. It is the one that gates :ascended-name, and it is
+  ;; enough: Grim Dawn upgrades the remaining blocks itself when it loads the
+  ;; character, exactly as it does for any pre-expansion save. Raising the others
+  ;; here means supplying every field they gained, and getting that wrong writes a
+  ;; save the game cannot read -- a much worse failure than a block it will
+  ;; upgrade on its own.
+  {3 11})
+
+(defn- fill-nils
+  "Supply `defaults` for keys that are absent *or* nil.
+
+  merge is not enough: a record read while the version gate was closed carries
+  the key with a nil value rather than omitting it, and merge lets that nil win."
+  [defaults m]
+  (reduce (fn [acc [k v]] (if (nil? (get acc k)) (assoc acc k v) acc))
+          m defaults))
+
+(defn- ensure-foa-fields
+  "Give every record the fields the raised block versions will write.
+
+  None of these default: the writer asserts on nil rather than substituting a
+  zero, so anything the older layout omitted has to be supplied explicitly.
+  Items, stash tabs and skills each gained fields, and they are scattered
+  through the character at different depths, so this walks the whole structure
+  rather than naming paths."
+  [x]
+  (cond
+    ;; an item -- block 3 and block 4
+    (and (map? x) (contains? x :basename))
+    (fill-nils {:ascended-name "" :v11-unk2 0
+                :seed-reroll-count 0 :affix-reroll-count 0} x)
+
+    ;; a stash tab -- block 4 gained a five-int trailer per tab
+    (and (map? x) (contains? x :width) (contains? x :height))
+    (fill-nils {:v11-unk1 0 :v11-unk2 0 :v11-unk3 0 :v11-unk4 0 :v11-unk5 0}
+               (into (empty x) (map (fn [[k v]] [k (ensure-foa-fields v)])) x))
+
+    ;; a skill record -- block 8 gained one byte after :enabled
+    (and (map? x) (contains? x :skill-name))
+    (fill-nils {:v8-unk1 0} x)
+
+    (map? x) (into (empty x) (map (fn [[k v]] [k (ensure-foa-fields v)])) x)
+    (vector? x) (mapv ensure-foa-fields x)
+    (sequential? x) (map ensure-foa-fields x)
+    :else x))
+
+(defn upgrade-to-foa
+  "Raise the character's block versions so the expansion's fields are written.
+
+  Done only when the imported build actually needs it -- an ascended affix is the
+  one thing that cannot survive the older layout. Upgrading unconditionally would
+  hand a save to anyone still on a pre-expansion install that their game could not
+  read."
+  [character]
+  (-> character
+      (update :meta-block-list
+              (fn [blocks]
+                (mapv (fn [b]
+                        (if-let [v (foa-block-versions (:meta-block-id b))]
+                          (assoc b :version v)
+                          b))
+                      blocks)))
+      ;; block 16 gained two ints of its own, and they sit at the top level
+      (->> (fill-nils {:16-unk1 0 :16-unk2 0}))
+      ensure-foa-fields))
+
+(defn- needs-foa-layout?
+  "Does this build carry anything the pre-expansion layout cannot hold?"
+  [gt-character]
+  (boolean (some :ascendedAffix (vals (:equipment gt-character)))))
+
 (defn- equipped-items
   "Every path into the character that holds a real equipped item.
 
@@ -739,7 +821,9 @@
         template-character (gdc/load-character-file character-file)
 
         ;; Create a new character from the template
-        new-character (cond-> (gt-apply-character (:data gt-character-root) template-character)
+        gt-data (:data gt-character-root)
+        new-character (cond-> (gt-apply-character gt-data template-character)
+                        (needs-foa-layout? gt-data) upgrade-to-foa
                         max-rolls? maximise-rolls)
 
         ;; Save it back into the template files directory
