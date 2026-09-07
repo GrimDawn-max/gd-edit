@@ -112,7 +112,8 @@
 
 (def item-version-foa
   "Block version at which the item record grew by 4 fields: two ahead of
-  :relic-completion-level and two after :stack-count.
+  :relic-completion-level and two after :stack-count. The first of them is
+  :ascended-name, a string; the other three have been zero everywhere observed.
 
   Blocks holding items were at version 4 (character inventory) or 5 (transfer
   stash) before this, and all moved to 11."
@@ -184,18 +185,34 @@
    :unknown        :int32
    :augment-seed   :int32
 
-   ;; Zero in every file observed so far; purpose unknown. These sit *ahead* of
-   ;; the two fields below, so reading them as though they were absent silently
-   ;; yields 0 for every relic level and stack count.
-   :v11-unk1       (after-item-version item-version-foa :int32z)
+   ;; The record of the Fangs of Asterkarn ascended affix applied at the Kurnhold
+   ;; altar, e.g. "records/items/lootaffixes/ascended/mastery/playerclass06/b306c.dbr".
+   ;; Empty on every un-ascended item -- and an empty string and an int32 zero are
+   ;; both four zero bytes, which is why this read as an int for so long.
+   ;;
+   ;; These sit *ahead* of the two fields below, so reading them as though they
+   ;; were absent silently yields 0 for every relic level and stack count.
+   :ascended-name  (after-item-version item-version-foa (s/string :ascii))
+
+   ;; Zero on all 80 items observed so far, across every alteration the Inventor
+   ;; offers. Best remaining guess is `craft_ascendantreroll`, a fourth reroll
+   ;; recipe no UI record references. Could also be another empty string -- the
+   ;; same ambiguity that hid :ascended-name -- so treat a non-zero value here as
+   ;; a signal to re-examine the layout rather than as a number to trust.
    :v11-unk2       (after-item-version item-version-foa :int32z)
 
    :relic-completion-level :int32
    :stack-count            :int32
 
-   ;; Likewise zero everywhere observed.
-   :v11-unk3       (after-item-version item-version-foa :int32z)
-   :v11-unk4       (after-item-version item-version-foa :int32z)))
+   ;; How many times the item has been altered at the Inventor. These drive the
+   ;; escalating cost ladders: the price index is (count - 1), clamped at 0, so
+   ;; the first two alterations of a kind both charge the cheapest rung.
+   ;;
+   ;; Prefix, suffix and ascended-bonus alterations all share :affix-reroll-count
+   ;; -- there is no separate counter per affix kind. The game derives
+   ;; "altered, therefore untradeable" from these being non-zero; no flag is stored.
+   :seed-reroll-count  (after-item-version item-version-foa :int32z)
+   :affix-reroll-count (after-item-version item-version-foa :int32z)))
 
 (def InventoryItem
   (into Item

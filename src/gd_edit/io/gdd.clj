@@ -32,7 +32,7 @@
   (let [count (-> (:block-stack @context)
                   (first)
                   (:length)
-                  (- 5)
+                  (- 6)
                   (/ 4))]
     count))
 
@@ -41,6 +41,10 @@
   (s/struct-def
    :state :int32
    :in-progress :byte
+   ;; Fangs of Asterkarn added one byte here, exactly as block 8's skill records
+   ;; gained one after :enabled. Without it the objectives array is mis-sized and
+   ;; every quest file fails to parse.
+   :v11-unk1 :byte
    :objectives (s/array :int32
                         :read-length-fn objectives-count
                         :skip-write-length true)))

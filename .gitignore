@@ -23,3 +23,6 @@ gd-edit.log
 .clj-kondo
 .lsp
 .DS_Store
+
+# Vendored third-party sources - NOT to be committed pending licensing
+/java-src
