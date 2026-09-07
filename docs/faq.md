@@ -208,6 +208,45 @@ Two usual causes:
 2. **The game was running.** Grim Dawn writes your character on save or exit,
    overwriting whatever gd-edit put there. Close the game first.
 
+### macOS says the app is damaged, or will not open
+
+macOS blocks it because the build is not signed by an identified developer.
+Signing requires a paid Apple Developer account, which this project does not
+have. The app is not damaged and nothing is wrong with the download.
+
+=== "macOS 15 (Sequoia) and newer"
+
+    Double-click **gd-edit.app**. The warning offers only *Move to Trash* or
+    *Done* — choose **Done**.
+
+    Then open **System Settings → Privacy & Security**, scroll down to the
+    Security section, and click **Open Anyway** beside the message about
+    gd-edit.
+
+    Control-clicking and choosing *Open* does **not** work on these versions.
+    Apple removed that shortcut in macOS 15.
+
+=== "macOS 14 (Sonoma) and older"
+
+    Control-click (or right-click) **gd-edit.app**, choose **Open**, then
+    confirm.
+
+Either way it only needs doing once.
+
+If you would rather use the terminal, this clears it outright and works on every
+version:
+
+```
+xattr -dr com.apple.quarantine /path/to/gd-edit.app
+```
+
+Running the jar directly avoids the check altogether, since `java` is itself a
+trusted program:
+
+```
+java -jar gd-edit.app/Contents/Java/gd-edit-standalone.jar
+```
+
 ### Java is missing or too old
 
 gd-edit needs Java 17 or newer. The launcher will say which version it found and

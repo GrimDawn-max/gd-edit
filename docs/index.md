@@ -39,9 +39,9 @@ delete the folder.
 
     Run **gd-edit.command**, or **gd-edit.app** if you prefer an icon.
 
-    macOS will refuse the first time, because the build is not notarised.
-    Right-click the file and choose **Open**, then confirm — that is the
-    documented way to run an unsigned app, and it only needs doing once.
+    macOS blocks the first launch, because the build is not signed by an
+    identified developer. How you get past it depends on your version — see
+    [the first launch is blocked](faq.md#macos-says-the-app-is-damaged-or-will-not-open).
 
 === "Linux"
 
