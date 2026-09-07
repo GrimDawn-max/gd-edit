@@ -311,14 +311,47 @@ A batch file is one command per line, exactly as you would type them.
 ## Ascended bonuses
 
 Fangs of Asterkarn added ascended affixes, applied at the altar in Kurnhold.
-gd-edit reads them, shows them, and can set them:
+gd-edit reads them, shows them, and can set them.
+
+Leave the value off and it lists what the item can take:
+
+```
+set inv/0/items/0/ascended-name
+```
+
+```
+Currently: +3 to Wasting
+
+Occultist
+   1. +2 to Blood Burst   (modifies Dreeg's Evil Eye)
+   2. +4 to Curse of Frailty
+   3. modifier to Maiven's Sphere -- Reduced Crowd Control Duration 5
+Shaman
+   4. +3 to Wendigo Totem
+Any mastery
+   5. Offensive Ability 20, Crit Damage 4
+
+Showing this character's masteries. Add "all" to see every affix the item can take.
+Which? [1-5, blank to cancel]:
+```
+
+These records have no names. Ordinary prefixes and suffixes are called things
+like *of the Boar*, but not one of the 993 ascended affixes carries a name, so
+each line says what the affix **grants** instead.
+
+The list is cut to the loaded character's masteries, since that is what the altar
+would offer them — for a common item that is about 24 entries rather than 88.
+`set <path>/ascended-name all` shows every affix the item can legally take.
+
+A record path still works if you have one:
 
 ```
 set inv/0/items/0/ascended-name records/items/lootaffixes/ascended/mastery/playerclass06/b306c.dbr
 ```
 
-It refuses an affix the altar could not have produced on that item — the check
-comes from the game's own tables, based on the item's rarity and category.
+Either way it refuses an affix the altar could not have produced on that item —
+the check comes from the game's own tables, based on the item's rarity and
+category.
 
 ### Nothing about an ascended bonus is random
 

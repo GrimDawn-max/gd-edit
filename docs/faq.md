@@ -113,6 +113,19 @@ set inv/0/items/0/augment-name records/items/enchants/b227a_enchant.dbr
 [`find-seed`](commands.md#find-seed) offers both while creating an item, which is
 usually easier.
 
+### How do I pick an ascended bonus without knowing record paths?
+
+Leave the value off and gd-edit lists them:
+
+```
+set inv/0/items/0/ascended-name
+```
+
+Each line says what the affix grants, because these records have no names of
+their own. The list covers the loaded character's masteries; add `all` for
+every affix the item can take. See
+[ascended bonuses](commands.md#ascended-bonuses).
+
 ### Can I get the maximum roll on an ascended bonus?
 
 There is no roll to maximise. Ascended affixes are fixed — no value in that data

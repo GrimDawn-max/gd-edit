@@ -139,6 +139,15 @@
                " to just supply the name of the item you want. The editor will try its best to"
                " figure the right combination of basename, prefix, and suffix. It also takes"
                " into consideration of the character that has currently been loaded."
+               ""
+               "Example 4:"
+               " set inv/0/items/0/ascended-name"
+               ""
+               " Leaving the value off an ascended-name path lists the ascended bonuses"
+               " that item can take and sets the one you choose. Those records have no"
+               " names in the game data, so each line says what the affix grants instead."
+               " The list covers the loaded character's masteries; add \"all\" to see"
+               " every affix the item could legally take."
                " "])]
 
    ["remove" "Removes an item from the specified collection"
