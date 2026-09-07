@@ -25,6 +25,7 @@
   (An earlier version of this note credited a zero lootRandomizerJitter. That
   field is not present on these records at all -- right conclusion, wrong reason.)"
   (:require [gd-edit.db-utils :as dbu]
+            [gd-edit.labels :as labels]
             [gd-edit.utils :as u]
             [clojure.string :as str]))
 
@@ -135,3 +136,151 @@
                        "%s affixes from a different set (%d legal affixes).\n"
                        "The altar could never produce this combination.")
                   affix-record rarity category rarity category (count legal)))))))
+
+;; ---------------------------------------------------------------------------
+;; Describing and offering affixes
+;;
+;; These records have no name. Ordinary prefixes and suffixes carry a
+;; lootRandomizerName -- "of the Boar" -- but not one of the 993 ascended affixes
+;; does, so a chooser has to say what an affix *grants* instead.
+
+(def ^:private modifier-noise
+  "Fields on a skill-modifier record that describe the skill rather than the bonus.
+
+  skillMaxLevel is how far the modified skill can be pushed, skillChanceWeight is
+  internal weighting, and the refresh/targeting fields are how the skill behaves
+  rather than anything the player gains. None of them belongs in a label."
+  #{"skillMaxLevel" "skillChanceWeight" "overwriteBaseSkill"
+    "skillTargetAngle" "skillTargetNumber" "skillTargetRadius"
+    "projectileLaunchRotation" "projectileSpeedModifier"})
+
+(defn- mechanics-field?
+  [k]
+  (or (contains? modifier-noise k)
+      (str/starts-with? k "refreshDuration")
+      (str/starts-with? k "refreshCooldown")))
+
+(defn- refresh-phrase
+  "The refresh fields say a skill can reset its cooldown or extend its duration.
+
+  Those are spread over several fields whose raw names mean nothing to a player,
+  but dropping them outright leaves some affixes with an empty description -- and
+  two affixes on the same skill then look identical again. Used only when the
+  modifier grants no stats of its own."
+  [r]
+  (let [has? (fn [prefix] (some (fn [[k _]] (and (string? k) (str/starts-with? k prefix))) r))]
+    (->> [(when (has? "refreshCooldown") "chance to reset its cooldown")
+          (when (has? "refreshDuration") "chance to extend its duration")]
+         (remove nil?)
+         seq
+         (#(when % (str/join ", " %))))))
+
+(defn- modifier-effect
+  "What a skill modifier actually grants, as a short phrase.
+
+  Several affixes modify the same skill and differ only here -- two of Arcanist's
+  affixes both read \"modifier to Maiven's Sphere of Protection\" and are told
+  apart solely by this. Without it a chooser offers identical-looking options."
+  [modifier-record]
+  (when-let [r (dbu/record-by-name modifier-record)]
+    (let [stats (not-empty
+                 (labels/stat-label
+                  (into {} (remove (fn [[k v]]
+                                     (and (string? k)
+                                          (or (mechanics-field? k)
+                                              ;; the equal upper half of a pair, as above
+                                              (and (str/ends-with? k "MaxModifier")
+                                                   (= v (get r (str/replace k "MaxModifier" "Modifier")))))))
+                                   r))))]
+      ;; Nearly every modifier carries refresh triggers, so naming them alongside
+      ;; real stats pads every line in the list without telling anyone apart.
+      ;; They earn their place only when there is nothing else to say.
+      (or stats (refresh-phrase r)))))
+
+(defn affix-label
+  "Describe an ascended affix by what it grants.
+
+  The mastery affixes give +N to a skill plus a modifier, so a raw field dump
+  reads as gibberish for them -- what matters is the skill name."
+  [rec]
+  (let [sk (get rec "augmentSkillName1")
+        lv (get rec "augmentSkillLevel1")
+        modified (get rec "modifiedSkillName1")
+        effect (some-> (get rec "modifierSkillName1") modifier-effect)]
+    (cond
+      (and sk lv)
+      (let [granted (or (labels/skill-label sk) "?")
+            m (some-> modified labels/skill-label)]
+        ;; The modified skill is usually the same one being augmented, in which
+        ;; case naming it twice just adds noise.
+        (format "+%s to %s%s%s" (u/maybe-int lv) granted
+                (if (and m (not= m granted)) (format "   (modifies %s)" m) "")
+                (if effect (str " -- " effect) "")))
+
+      modified
+      (format "modifier to %s%s" (or (labels/skill-label modified) "?")
+              (if effect (str " -- " effect) ""))
+
+      :else
+      ;; The generic affixes are plain stat bonuses. Two kinds of noise to drop
+      ;; before describing them:
+      ;;
+      ;;   augmentSkillLevel*    carried with no companion skill name, so it
+      ;;                         applies to nothing -- vestigial data
+      ;;   *MaxModifier          the upper half of a pair whose halves are equal
+      ;;                         here, so naming it repeats the stat beside it
+      (labels/stat-label
+       (into {} (remove (fn [[k v]]
+                          (and (string? k)
+                               (or (str/starts-with? k "augmentSkillLevel")
+                                   (and (str/ends-with? k "MaxModifier")
+                                        (= v (get rec (str/replace k "MaxModifier" "Modifier")))))))
+                        rec))))))
+
+(defn mastery-key
+  "The playerclassNN an affix belongs to, or nil when it is not mastery-specific."
+  [recordname]
+  (second (re-find #"/mastery/(playerclass\d+)/" (str recordname))))
+
+(defn character-masteries
+  "The playerclassNN keys for the masteries a character has taken.
+
+  A mastery shows up in the skill list as a skill whose record is a
+  Skill_Mastery, and the record path names the class."
+  [character]
+  (->> (:skills character)
+       (keep :skill-name)
+       (filter #(= "Skill_Mastery" (get (dbu/record-by-name %) "Class")))
+       (keep #(second (re-find #"/(playerclass\d+)/" (str %))))
+       set))
+
+(defn mastery-display-name
+  "The player-facing name of a mastery, given its playerclassNN."
+  [pc]
+  (some-> (dbu/record-by-name (format "records/skills/%s/_classtraining_%s.dbr"
+                                      pc (str/replace pc "playerclass" "class")))
+          dbu/skill-display-name
+          (as-> tag (or (get (dbu/localization-table) tag) tag))))
+
+(defn candidates
+  "Ascended affixes for `item`, grouped for display.
+
+  Returns a seq of [group-name [[label record-name] ...]], the generic affixes
+  last under \"Any mastery\". When `masteries` is given, only those masteries are
+  offered: the altar draws from the tables for the character's own masteries, so
+  everything else is unreachable for them in game."
+  ([item] (candidates item nil))
+  ([item masteries]
+   (when-let [legal (legal-affixes item)]
+     (let [rows (->> legal
+                     (keep (fn [rn]
+                             (when-let [r (dbu/record-by-name rn)]
+                               {:record rn :mastery (mastery-key rn) :label (affix-label r)})))
+                     (filter (fn [{:keys [mastery]}]
+                               (or (nil? masteries) (nil? mastery) (contains? masteries mastery)))))]
+       (->> rows
+            (group-by :mastery)
+            (sort-by (fn [[m _]] [(if m 0 1) (str m)]))
+            (map (fn [[m rs]]
+                   [(if m (or (mastery-display-name m) m) "Any mastery")
+                    (->> rs (map (juxt :label :record)) (sort-by first) vec)])))))))

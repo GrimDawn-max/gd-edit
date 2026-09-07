@@ -24,9 +24,15 @@
   [coll key]
 
   (cond
-    ;; If we're looking at a sequential collection, try to interpret key as an index
+    ;; If we're looking at a sequential collection, try to interpret key as an index.
+    ;;
+    ;; An index past the end, or one that is not a number at all, is something a
+    ;; user types routinely -- inv/0/items/3 when the bag holds two things. Return
+    ;; nil for those: the caller reads a nil cursor as "not found" and says so,
+    ;; where throwing put a stack trace on screen instead.
     (sequential? coll)
-    (nth coll (coerce-to-int key))
+    (let [idx (try (coerce-to-int key) (catch Throwable _ nil))]
+      (when idx (nth coll idx nil)))
 
     (associative? coll)
     (get coll key)

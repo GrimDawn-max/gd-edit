@@ -7,6 +7,7 @@
             [clojure.set]
             [gd-edit.db-utils :as dbu]
             [gd-edit.ascension :as ascension]
+            [gd-edit.jline :as jl]
             [gd-edit.structure-walk :as sw]
             [gd-edit.globals :as globals]
             [gd-edit.utils :as u]
@@ -159,6 +160,54 @@
   [val-path token]
   (swap! globals/character update-in val-path conj token))
 
+(defn- ascension-picker
+  "Offer the ascended affixes this item can take, and return the chosen record.
+
+  These records have no names of their own, so each line says what the affix
+  grants. The list is cut to the loaded character's masteries, because that is
+  what the altar would offer them; \"set <path> all\" shows every mastery.
+
+  Returns the chosen record name, or nil to cancel."
+  [item show-all?]
+  (let [masteries (when-not show-all? (ascension/character-masteries @globals/character))
+        groups (ascension/candidates item (not-empty masteries))]
+    (cond
+      (nil? groups)
+      (do (u/print-line (red "Cannot tell what ascended affixes this item can take."))
+          (u/print-line "Its category or rarity is not one gd-edit recognises.")
+          nil)
+
+      (empty? (mapcat second groups))
+      (do (u/print-line (yellow "No ascended affixes are available for this item."))
+          (when (and (not show-all?) (empty? masteries))
+            (u/print-line "The loaded character has no masteries, so only generic affixes apply."))
+          nil)
+
+      :else
+      (let [flat (vec (mapcat second groups))
+            current (:ascended-name item)]
+        (u/print-line)
+        (when (and current (not= "" current))
+          (u/print-line (str "Currently: "
+                             (or (some-> (dbu/record-by-name current) ascension/affix-label)
+                                 current))))
+        (loop [gs groups n 1]
+          (when-let [[title rows] (first gs)]
+            (u/print-line)
+            (u/print-line (yellow title))
+            (doseq [[i [label _]] (map-indexed vector rows)]
+              (u/print-line (format "  %3d. %s" (+ n i) label)))
+            (recur (rest gs) (+ n (count rows)))))
+        (u/print-line)
+        (when-not show-all?
+          (u/print-line (str "Showing this character's masteries. "
+                             "Add \"all\" to see every affix the item can take.")))
+        (let [answer (str/trim (or (jl/readline
+                                    (format "Which? [1-%d, blank to cancel]: " (count flat))) ""))]
+          (when-let [n (try (Integer/parseInt answer) (catch Exception _ nil))]
+            (when (<= 1 n (count flat))
+              (second (nth flat (dec n))))))))))
+
 (defn set-handler
   [[input tokens]]
 
@@ -168,8 +217,11 @@
     (not (au/character-loaded?))
     (commands.choose-character/character-selection-screen!)
 
-    (< (count tokens) 2)
-    (u/print-line "Usage: show <path> <new-value>")
+    ;; One token is allowed through: an ascended-name path with no value opens
+    ;; the picker below. Anything else still needs a value, and is turned away
+    ;; once we know what the path points at.
+    (< (count tokens) 1)
+    (u/print-line "Usage: set <path> <new-value>")
 
     ;; Split a path into components.
     ;; We're going to use these as keys to navigate into the character sheet
@@ -190,11 +242,23 @@
         (let [value (:found-item walk-result)
               ;; What is the type of the value? We'll have to coerce the supplied new value
               ;; to the same type first.
-              newval (try (dbu/coerce-to-type (second tokens) (type value))
-                          (catch Exception _ :failed))
+              ;; Only coerce when a value was actually supplied: an ascended-name
+              ;; path may legitimately arrive without one, and coerce-to-type
+              ;; throws a bare Throwable rather than an Exception, so a nil here
+              ;; would escape the catch and take the whole editor down.
+              newval (when (some? (second tokens))
+                       (try (dbu/coerce-to-type (second tokens) (type value))
+                            (catch Throwable _ :failed)))
               val-path (:actual-path walk-result)]
 
           (cond
+            ;; A missing value is only meaningful for an ascended affix, where
+            ;; the picker supplies it. Everywhere else it is a usage error.
+            (and (< (count tokens) 2)
+                 (not (and (dbu/is-item? (get-in @globals/character (butlast val-path)))
+                           (= :ascended-name (last val-path)))))
+            (u/print-line "Usage: set <path> <new-value>")
+
             ;; Is the targetted value an item?
             ;; Let the set-item handler deal with it
             (dbu/is-item? value)
@@ -225,6 +289,19 @@
             ;; item's category, so anything outside that set is one the game could
             ;; not have created. Refuse it rather than write an item the game may
             ;; reject or mis-render.
+            ;; No value given: these records have no player-facing names, so
+            ;; nobody can be expected to type one. Offer the legal set instead.
+            (and
+             (dbu/is-item? (get-in @globals/character (butlast val-path)))
+             (= :ascended-name (last val-path))
+             (or (nil? (second tokens))
+                 (= "all" (str/lower-case (str (second tokens))))))
+            (let [item (get-in @globals/character (butlast val-path))]
+              (if-let [choice (ascension-picker item (= "all" (str/lower-case (str (second tokens)))))]
+                (do (swap! globals/character set-character-field val-path choice)
+                    (u/print-line "Ok!"))
+                (u/print-line "Nothing set.")))
+
             (and
              (dbu/is-item? (get-in @globals/character (butlast val-path)))
              (= :ascended-name (last val-path)))

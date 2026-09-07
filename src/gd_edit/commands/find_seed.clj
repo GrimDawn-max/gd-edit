@@ -16,67 +16,11 @@
             [gd-edit.utils :as u]
             [gd-edit.commands.item :as item]
             [gd-edit.ascension :as ascension]
+            [gd-edit.labels :as labels]
             [gd-edit.max-rolls :as max-rolls]
             [jansi-clj.core :refer [red green yellow]]))
 
 ;; ------------------------------------------------------------------- labelling
-
-(def ^:private resistance-names
-  {"defensivePhysical" "Physical Resistance"
-   "defensivePierce" "Pierce Resistance"
-   "defensiveFire" "Fire Resistance"
-   "defensiveCold" "Cold Resistance"
-   "defensiveLightning" "Lightning Resistance"
-   "defensivePoison" "Poison & Acid Resistance"
-   "defensiveAether" "Aether Resistance"
-   "defensiveChaos" "Chaos Resistance"
-   "defensiveLife" "Vitality Resistance"
-   "defensiveBleeding" "Bleeding Resistance"
-   "defensiveElementalResistance" "Elemental Resistance"
-   "defensiveProtection" "Armor"
-   "defensiveTotalSpeedResistance" "Slow Resistance"
-   "defensiveStun" "Reduced Stun Duration"
-   "defensiveFreeze" "Reduced Freeze Duration"})
-
-(def ^:private character-names
-  "Stats the summary's own templates do not cover."
-  {"characterRunSpeedModifier" "Movement Speed"
-   "characterAttackSpeedModifier" "Attack Speed"
-   "characterSpellCastSpeedModifier" "Casting Speed"
-   "characterOffensiveAbility" "Offensive Ability"
-   "characterDefensiveAbility" "Defense Ability"
-   "characterDeflectProjectile" "Chance to Avoid Projectiles"
-   "characterTotalSpeedModifier" "Total Speed"
-   "characterLife" "Health"
-   "characterMana" "Energy"
-   "characterStrength" "Physique"
-   "characterDexterity" "Cunning"
-   "characterIntelligence" "Spirit"})
-
-(def ^:private damage-name
-  "record-ref -> the name the game gives that damage type."
-  (into {} (for [{:keys [name record-ref]} isum/effect-types] [record-ref name])))
-
-(defn field-label
-  "A readable name for a stat field, or nil when we have nothing better than the
-  field itself.
-
-  gd-edit already knows how to phrase many of these, so the templates it uses for
-  item summaries are the first place to look. The damage families are generated
-  rather than listed there, so they are reconstructed from the same table the
-  summary builds them from."
-  [field]
-  (or (when-let [tmpl (first (get isum/effect-string-map field))]
-        (-> tmpl (str/replace "%s" "") str/trim))
-      (get resistance-names field)
-      (get character-names field)
-      (when-let [[_ ref] (re-matches #"offensive(.+)Modifier" field)]
-        (when-let [n (damage-name ref)] (str n " Damage")))
-      (when-let [[_ ref] (re-matches #"offensive(.+)(?:Min|Max)" field)]
-        (when-let [n (damage-name ref)] (str n " Damage")))
-      (when-let [[_ ref] (re-matches #"retaliation(.+)(?:Min|Max)" field)]
-        (when-let [n (damage-name ref)] (str n " Retaliation")))
-      (when (= field "conversionPercentage") "Damage Conversion")))
 
 (defn- shown-value
   "A stat as the player sees it: whole numbers, matching the item summary.
@@ -95,7 +39,7 @@
   when we have nothing better, and pairing it with a readable name everywhere
   just makes every line longer than it needs to be."
   [field]
-  (or (field-label field) field))
+  (or (labels/field-label field) field))
 
 ;; ------------------------------------------------------------ item selection
 
@@ -354,15 +298,6 @@
 
 ;; ------------------------------------------------------------------ handler
 
-(defn- stat-label
-  "A bonus record described by what it gives, since these have no useful name."
-  [rec]
-  (->> rec
-       (filter (fn [[k v]] (and (string? k) (number? v)
-                                (not (#{"lootRandomizerJitter" "levelRequirement"
-                                        "lootRandomizerCost" "marketAdjustmentPercent"} k)))))
-       (map (fn [[k v]] (format "%s %s" (or (field-label k) k) (u/maybe-int v))))
-       (str/join ", ")))
 
 (defn- choose-from
   "Offer `candidates` -- [label record] pairs -- and return the chosen record.
@@ -407,45 +342,6 @@
        (sort-by first)
        vec))
 
-(defn- skill-label
-  "The player-facing name of a skill record."
-  [path]
-  (when-let [r (dbu/record-by-name path)]
-    (let [tag (dbu/skill-display-name r)]
-      (or (get (dbu/localization-table) tag)
-          tag
-          (last (str/split (str path) #"/"))))))
-
-(defn- ascended-label
-  "Describe an ascended affix by what it grants.
-
-  The mastery affixes give +N to a skill plus a modifier, so stat-label's raw
-  field dump reads as gibberish for them -- what matters is the skill name."
-  [rec]
-  (let [sk (get rec "augmentSkillName1")
-        lv (get rec "augmentSkillLevel1")
-        modified (get rec "modifiedSkillName1")]
-    (cond
-      (and sk lv)
-      (let [granted (or (skill-label sk) "?")
-            m (some-> modified skill-label)]
-        ;; The modified skill is usually the same one being augmented, in which
-        ;; case naming it twice just adds noise.
-        (format "+%s to %s%s" (u/maybe-int lv) granted
-                (if (and m (not= m granted)) (format "   (modifies %s)" m) "")))
-
-      modified
-      (format "modifier to %s" (or (skill-label modified) "?"))
-
-      :else
-      ;; The generic (non-mastery) affixes are plain stat bonuses, but they carry
-      ;; augmentSkillLevel entries with no companion skill name -- vestigial, and
-      ;; pure noise in a label. Drop them and describe the stats.
-      (stat-label (into {} (remove (fn [[k _]]
-                                     (and (string? k)
-                                          (re-find #"^augmentSkillLevel\d+$" k)))
-                                   rec))))))
-
 (defn- ascended-candidates
   "The ascended affixes this item could legally receive.
 
@@ -455,14 +351,14 @@
   [record]
   (->> (ascension/legal-affixes {:basename (:recordname record)})
        (keep dbu/record-by-name)
-       (map (fn [r] [(ascended-label r) r]))
+       (map (fn [r] [(ascension/affix-label r) r]))
        (sort-by first)
        vec))
 
 (defn- blacksmith-candidates []
   (->> (records-under "records/items/lootaffixes/crafting/")
        (filter rolls?)
-       (map (fn [r] [(stat-label r) r]))
+       (map (fn [r] [(labels/stat-label r) r]))
        (sort-by first)
        vec))
 
@@ -476,7 +372,7 @@
     (->> table
          (filter (fn [[k _]] (and (string? k) (str/starts-with? k "randomizerName"))))
          (keep (fn [[_ v]] (dbu/record-by-name v)))
-         (map (fn [r] [(stat-label r) r]))
+         (map (fn [r] [(labels/stat-label r) r]))
          (sort-by first)
          vec)))
 
