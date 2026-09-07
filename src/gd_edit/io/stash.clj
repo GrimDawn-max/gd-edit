@@ -99,6 +99,37 @@
    :stash     (s/array
                (struct-block {0 InventorySack}))))
 
+;; ---------------------------------------------------------------- illusions
+
+(def IllusionCategory
+  "One slot category's worth of unlocked illusions.
+
+  The `:version` here is not a format version -- the nine categories carry 1, 3,
+  4, 5, 7, 8, 9, 14 and 15, which is not a sequence. They look like slot
+  identifiers, with the gaps being slots that take no illusion, so the value is
+  kept as read rather than named."
+  (s/struct-def
+   :version :int32
+   :records (s/array (s/string :ascii))))
+
+(def Block19
+  "transmutes.gst -- the illusions unlocked on this account.
+
+  Illusions (transmogs) come from the Loyalist packs and from drops, and this
+  file is the collection: what the player is entitled to apply. Which illusion is
+  actually applied to an item is stored separately, in that item's
+  :transmute-name.
+
+  The layout mirrors Block18's -- same header, then an array of nested blocks --
+  which is why the transfer stash's machinery reads it unchanged."
+  (s/struct-def
+   :version   :int32
+   :unknown   :int32-
+   :mod       (s/string :ascii)
+   :expansion-status :byte
+   :categories (s/array
+                (struct-block {0 IllusionCategory}))))
+
 ;; The transfer stash file seem to have a
 (defn make-enc-context
   [& rest]
@@ -118,16 +149,45 @@
         enc-context (make-enc-context seed enc-table)
 
         magic-number (gdc/read-int! bb enc-context)]
-    (when (not= magic-number 2)
+    ;; magic 2 is the transfer stash; magic 1 is transmutes.gst, which uses the
+    ;; same encryption and the same block shape. reagents.gst is also magic 1 but
+    ;; its block is not one we read, so the block id decides what comes back.
+    (when-not (#{1 2} magic-number)
       (throw (Throwable. "I don't understand this stash format!")))
 
     (merge
-      (gdc/read-block bb enc-context {18 Block18})
+      (gdc/read-block bb enc-context {18 Block18, 19 Block19})
       {:meta-stash-seed seed
        :meta-stash-loaded-from filepath})))
 
+(defn load-illusions
+  "The illusion records unlocked on this account, or nil.
+
+  Returns nil rather than throwing for anything unexpected -- a missing file, a
+  layout we do not recognise -- because this is a convenience, and failing to
+  list illusions should never stop gd-edit doing anything else."
+  [filepath]
+  (try
+    (when (.exists (clojure.java.io/file filepath))
+      (let [data (load-stash-file filepath)]
+        (when (= 19 (:meta-block-id data))
+          (vec (for [c (:categories data)
+                     r (:records c)]
+                 r)))))
+    (catch Throwable _ nil)))
+
 (defn write-stash-file
+  "Write a transfer stash back to disk.
+
+  Only the transfer stash. load-stash-file also reads transmutes.gst, whose block
+  has a different shape entirely -- writing that through here would emit magic 2
+  and a Block18 layout over block-19 data, destroying the file. Refuse it rather
+  than leave the possibility open: gd-edit reads the illusion collection but has
+  no reason to write it."
   [stash savepath]
+  (when (not= 18 (:meta-block-id stash))
+    (throw (Throwable. (format "Refusing to write: this is block %s, not a transfer stash."
+                               (pr-str (:meta-block-id stash))))))
   (let [bb (ByteBuffer/allocate (* 10 1024 1024))
         _ (.order bb java.nio.ByteOrder/LITTLE_ENDIAN)
 
