@@ -7,7 +7,34 @@
             [gd-edit.stack :as stack]
             [gd-edit.game-dirs :as dirs]
             [gd-edit.commands.choose-character :as commands.choose-character])
-  (:import [com.sun.jna.platform FileUtils]))
+  (:import [com.sun.jna.platform FileUtils]
+           [java.awt Desktop Desktop$Action]))
+
+(defn- move-to-trash!
+  "Move a file or folder to the system trash. True when it actually went.
+
+  Prefers java.awt.Desktop, which ships with the JDK and handles all three
+  platforms with no native library of its own.
+
+  JNA is kept as a fallback for the case where Desktop is unavailable -- a
+  headless JVM, mainly. It used to be the only route, and it fails outright on
+  Apple Silicon: the native library JNA bundles has no arm64 slice, so the call
+  raises UnsatisfiedLinkError. That is an Error rather than an Exception, so the
+  catch here has to be Throwable; catching Exception let it escape and take the
+  whole delete command down with a stack trace."
+  [^java.io.File target]
+  (boolean
+   (or (try
+         (and (Desktop/isDesktopSupported)
+              (.isSupported (Desktop/getDesktop) Desktop$Action/MOVE_TO_TRASH)
+              (.moveToTrash (Desktop/getDesktop) target))
+         (catch Throwable _ false))
+
+       (try
+         (.moveToTrash (FileUtils/getInstance) (into-array [target]))
+         ;; JNA's moveToTrash returns nothing; reaching here means it worked.
+         true
+         (catch Throwable _ false)))))
 
 (defn- delete-character-file
   [savepath]
@@ -20,22 +47,38 @@
     (u/print-indent 1)
     (u/print-line (yellow target))
 
-    (try
-      (.moveToTrash (FileUtils/getInstance)
-                    (into-array [target]))
-      (catch Exception _ (u/print-line (red "Error!") "Could not move files to trash!")))
+    (if-not (move-to-trash! target)
+      ;; Say so plainly and change nothing. Unloading the character or returning
+      ;; to the selection screen here would suggest the delete had happened.
+      (do
+        (u/print-line)
+        (u/print-line (red "Could not move the character to the trash."))
+        (u/print-line "The character has not been deleted. Its files are still at:")
+        (u/print-indent 1)
+        (u/print-line (yellow target))
+        (u/print-line "Delete that folder yourself if you meant to remove it."))
 
-    ;; If the loaded character was deleted, unload the character from memory
-    (when (= (:meta-character-loaded-from @globals/character) (io/file savepath))
-      (reset! globals/character {}))
+      (do
+        (u/print-line "Deleted.")
 
-    (commands.choose-character/choose-or-manipulate-character-screen!)))
+        ;; If the loaded character was deleted, unload the character from memory
+        (when (= (:meta-character-loaded-from @globals/character) (io/file savepath))
+          (reset! globals/character {}))
+
+        (commands.choose-character/choose-or-manipulate-character-screen!)))))
 
 (defn- character-selection-screen
   []
 
   ;; grab a list save directories where a "player.gdc" file exists
-  (let [save-dirs (dirs/get-all-save-file-dirs)]
+  ;;
+  ;; Sorted by name, to match the character list shown everywhere else. These
+  ;; arrive in filesystem order, which put the same characters at different
+  ;; numbers in the two menus -- an easy way to delete the wrong one.
+  (let [display-name (fn [dir]
+                       (let [n (u/last-path-component (.getPath dir))]
+                         (if (= \_ (first n)) (subs n 1) n)))
+        save-dirs (sort-by display-name (dirs/get-all-save-file-dirs))]
 
     {:display-fn
      (fn []
@@ -49,10 +92,7 @@
                           (let [display-idx (inc idx)]
                             [(str display-idx)                    ; command string
                              (format "%s (%s save)"
-                                     (let [char-name (u/last-path-component (.getPath dir))]
-                                       (if (= \_ (first char-name))
-                                         (subs char-name 1)
-                                         char-name))
+                                     (display-name dir)
                                      (dirs/save-dir-type dir))         ; menu display string
                              (fn []                               ; function to run when selected
                                (let [savepath (.getPath (io/file dir "player.gdc"))]

@@ -168,7 +168,9 @@
 
    ["delete" "Delete a character"
     (str/join "\n"
-              ["Moves a character (and its folder) to the recycle bin."
+              ["Moves a character (and its folder) to the system trash -- the"
+               "Recycle Bin on Windows, Trash on macOS. It can be restored from"
+               "there; gd-edit itself has no undo."
                ""
                "Syntax 1: delete"
                ""
@@ -180,10 +182,10 @@
                "Deletes the character with the specified name."
                ""
                "Example:"
-               " delete Odie"
+               " delete Mary"
                ""
                ""
-               "Syntax 3: delete \"C:\\Users\\<userdir>\\Documents\\my games\\Grim Dawn\\save\\main\\_Odie\\player.gdc\""
+               "Syntax 3: delete \"C:\\Users\\<userdir>\\Documents\\my games\\Grim Dawn\\save\\main\\_Mary\\player.gdc\""
                ""
                "Deletes the character at the specified path."])]
 

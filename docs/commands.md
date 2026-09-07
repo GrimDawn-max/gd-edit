@@ -110,7 +110,37 @@ costs a full search, so a set of equipment takes a few minutes.
 
 ### delete
 
-Delete a character. There is no undo.
+Delete a character. With no argument it lists them and asks which:
+
+```
+delete
+```
+
+```
+Please choose a character to load:
+1) AscendMeNow (local save)
+2) Mary (local save)
+3) RedPriest (local save)
+
+> 2
+Moving character to trash:
+    /Users/you/Documents/My Games/Grim Dawn/save/main/_Mary
+Deleted.
+```
+
+Or name the character, or give the path to its save folder or `player.gdc`:
+
+```
+delete Mary
+delete "/Users/you/Documents/My Games/Grim Dawn/save/main/_Mary"
+```
+
+The character's whole folder goes to the **system trash**, so it can be restored
+from there if you did not mean it. gd-edit itself has no undo.
+
+If the name matches more than one character — the same name in a local save and
+a cloud save, say — it lists them and does nothing, so you can name the path of
+the one you meant.
 
 ---
 
