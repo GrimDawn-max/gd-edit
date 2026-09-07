@@ -8,11 +8,16 @@
   reports the unrolled value: gd-edit showed +60% Cold Damage for an item the
   game reads as +89%.
 
-  Rolling the values ourselves needs the game's own draw order, which is
-  supplied by the GrimDawnItemStats engine (see java-src/). That engine is
-  optional: it is resolved at runtime and every entry point here returns nil
-  when it is absent, so gd-edit runs unchanged without it and simply shows the
-  unrolled values as it always did."
+  Rolling the values ourselves needs the game's own draw order, which is supplied
+  by marius00's Grim Dawn Item Stats engine:
+
+      https://github.com/marius00/GrimDawnItemStats
+
+  Its sources are not in this repository -- drop them under java-src/ and the
+  build compiles them in. That engine is optional: it is resolved reflectively at
+  runtime and every entry point here returns nil when it is absent, so gd-edit
+  runs unchanged without it and simply shows the unrolled values as it always
+  did. See THIRD-PARTY.txt for the terms it is published under."
   (:require [gd-edit.db-utils :as dbu]))
 
 (def ^:private pet-calculator
