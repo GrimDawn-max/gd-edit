@@ -57,6 +57,26 @@ source is available from the listed project pages.
   clansi (vendored in src/clansi)      Eclipse Public License 1.0
 
 
+ITEM STAT ENGINE
+----------------
+
+The classes under com.grimdawn.itemstats, which compute an item's real
+seed-applied stats, are derived from:
+
+  Grim Dawn Item Stats                by marius00
+      https://github.com/marius00/GrimDawnItemStats
+      (published on the web as "Grim Dawn Seed Finder")
+
+The project states that its SDKs "are meant to be integrated into third-party
+tools that already parse the game database", that each "is self-contained with
+zero dependencies", and that integration is "by project reference or by copying
+the source files". It is offered "as-is, as a guide for third-party
+implementations. No support or bug reports."
+
+No stat or game data files are taken from it -- only the rolling algorithm.
+Questions about gd-edit's use of it should come here, not to that project.
+
+
 JAVA RUNTIME
 ------------
 
