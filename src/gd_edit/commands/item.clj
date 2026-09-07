@@ -97,17 +97,25 @@
     false))
 
 (defn prefer-material-over-blueprint
+  "Order a group of same-named records so blueprints sort last.
+
+  Several crafting blueprints carry the display name of the item they produce.
+  \"Celestial Lotus\" names both
+
+      records/items/crafting/materials/craft_celestiallotus.dbr           (the material)
+      records/items/crafting/blueprints/other/craft_material_celestiallotus.dbr  (its blueprint)
+
+  and picking the blueprint hands the user an item the game will not accept
+  wherever the material was wanted -- silently, since both display the same name.
+
+  The previous version only swapped the first two entries, and only when the
+  blueprint happened to sort first, so it missed any group ordered differently or
+  holding more than two records. sort-by is stable, so non-blueprints keep their
+  relative order."
   [coll]
 
-  (if (and (> (count coll) 1)
-
-           ;; Do the items have the exact same name?
-           (= (dbu/item-base-record-get-name (first coll)) (dbu/item-base-record-get-name (second coll)))
-
-           ;; Is the preferred one a blueprint?
-           (u/ci-match (:recordname (first coll)) "/items/crafting/blueprints/")
-           (u/ci-match (:recordname (second coll)) "/items/crafting/materials/"))
-    (swap-first-two coll)
+  (if (> (count coll) 1)
+    (vec (sort-by #(if (u/ci-match (:recordname %) "/items/crafting/blueprints/") 1 0) coll))
     coll))
 
 (def filter-db-records-for-items-with-display-name
@@ -244,6 +252,11 @@
    :augment-name   ""
    :unknown        0
    :augment-seed   0
+
+   ;; Fangs of Asterkarn ascended affix. Blank on a newly made item -- the altar
+   ;; is what fills it in. Must be present, not absent: it writes as a string,
+   ;; and a missing value fails the write.
+   :ascended-name  ""
 
    :var1        0
    :stack-count 1})
