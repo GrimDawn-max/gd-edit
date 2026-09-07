@@ -1,0 +1,51 @@
+# Builds the documentation and publishes it to GitHub Pages.
+#
+# Runs only when something under docs/ or the config changes, so ordinary code
+# commits do not trigger a site rebuild.
+#
+# Before the first run, set Settings -> Pages -> Source to "GitHub Actions".
+name: docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      # Pinned rather than floating: a docs build that breaks because an
+      # upstream release changed is a bad surprise on an unrelated commit.
+      - run: pip install mkdocs-material==9.7.7
+      - run: mkdocs build --strict
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
