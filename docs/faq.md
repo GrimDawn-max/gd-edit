@@ -79,29 +79,14 @@ What you can do is choose a seed that rolls the stats you want. See
 
 ### Can I optimise an item's seed?
 
-Yes. [`find-seed`](commands.md#find-seed) searches the whole seed space in around
-fifteen seconds, and either maximises every stat or finds rolls that clear
-minimums you set.
+Yes. There are 4,294,967,296 seed values — every number that fits in 32 bits —
+producing 2,147,483,647 distinct rolls.
 
-!!! note "This used to say no"
-
-    Earlier documentation said this was impractical, estimating about 1.65 months
-    to try every seed. That was true of asking the game's own calculator about
-    each one in turn. `find-seed` instead works out how a particular item rolls,
-    once, and then runs a small loop over the seeds — which is what makes a full
-    sweep practical.
-
-### Why does one tool say 2 billion seeds and another say 4 billion?
-
-Both are right, and they count different things.
-
-There are **4,294,967,296** seed *values* — every number that fits in 32 bits —
-producing **2,147,483,647** distinct *rolls*. A seed and that seed plus
-2,147,483,647 put the random generator into the same state, so they roll
-identically.
-
-So a search that returns "10 matches" has usually found five results, each
-listed twice. Either spelling works in the save.
+[`find-seed`](commands.md#find-seed) searches the whole seed space in around
+fifteen seconds per item, and either maximises every stat or finds rolls that
+clear minimums you set. It takes around two to four minutes to do the same
+across a full set of equipment using [`make-char`](commands.md#make-char) with
+the `--max-rolls` flag.
 
 ### How do I put a component or augment on an item?
 
