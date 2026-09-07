@@ -74,7 +74,8 @@ the source files". It is offered "as-is, as a guide for third-party
 implementations. No support or bug reports."
 
 No stat or game data files are taken from it -- only the rolling algorithm.
-Questions about gd-edit's use of it should come here, not to that project.
+That project asks for no support requests or bug reports, and neither does this
+one: see the note on support in README.txt.
 
 
 JAVA RUNTIME
