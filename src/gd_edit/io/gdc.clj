@@ -1166,7 +1166,29 @@
          _ (when *debug*
              (u/print-line "expected-end-position" expected-end-position)
              (u/print-line "actual position" (.position bb)))
-         _ (assert (= expected-end-position (.position bb)))
+
+         ;; A mismatch means the block was misread: a field is the wrong type or
+         ;; the wrong size, so everything decoded from here is untrustworthy and
+         ;; writing it back would corrupt the file. Refuse, but say why.
+         ;;
+         ;; This is how the Fangs of Asterkarn ascended affix first showed up --
+         ;; :ascended-name is a string, and it had been read as an int32 because
+         ;; an empty string and a zero are both four zero bytes, indistinguishable
+         ;; until an item finally carried a value. An AssertionError told the user
+         ;; nothing; the same thing happening again should not.
+         _ (when (not= expected-end-position (.position bb))
+             (throw (Throwable.
+                     (format (str "This save has data gd-edit does not understand.\n"
+                                  "\n"
+                                  "Block %s is %d bytes, but reading it consumed %d -- a field in it\n"
+                                  "is not the size or type this version expects, usually because a game\n"
+                                  "update changed the format.\n"
+                                  "\n"
+                                  "The save is not damaged and the game will still load it. gd-edit is\n"
+                                  "refusing rather than guessing, because writing back what it misread\n"
+                                  "would corrupt the file.")
+                             (pr-str id) length
+                             (- (long (.position bb)) (long (- expected-end-position length)))))))
 
          ;; Verify we have the correct enc-state at this point
          checksum (Integer/toUnsignedLong (.getInt bb))
@@ -1220,9 +1242,11 @@
                  (not (contains? #{:version :meta-block-id} key))))
        (into {})))
 
-(defn load-character-file
+(defn load-character-file*
+  "Parse a character file. Throws whatever the parse throws; see
+  load-character-file for the version that explains itself."
   ([filepath]
-   (load-character-file filepath nil))
+   (load-character-file* filepath nil))
 
   ([filepath file-content-bytes]
 
@@ -1328,6 +1352,39 @@
               ;; Put the pairs back into a map
               (into {})))
        block-list))
+
+(defn load-character-file
+  "Parse a character file, explaining a failure rather than reporting it raw.
+
+  A save gd-edit cannot parse is nearly always a save whose format moved: some
+  field is a different size or type than this version expects. That is what
+  happened when the Fangs of Asterkarn ascended affix appeared -- a string being
+  read as an int32 -- and what the user saw was a bare AssertionError.
+
+  The underlying exception is kept as the cause, since it is what a developer
+  needs, but the message a user reads should say what happened and what it means
+  for their save."
+  ([filepath] (load-character-file filepath nil))
+  ([filepath file-content-bytes]
+   (try
+     (load-character-file* filepath file-content-bytes)
+     (catch Throwable e
+       (throw (ex-info
+               (str "Could not read this save.\n"
+                    "\n"
+                    (if (re-find #"(?i)does not understand" (str (.getMessage e)))
+                      (.getMessage e)
+                      (str "Something in it is not the size or type this version of gd-edit\n"
+                           "expects, usually because a game update changed the save format.\n"
+                           "\n"
+                           "The save is not damaged and the game will still load it. gd-edit\n"
+                           "stops rather than guessing, because writing back what it misread\n"
+                           "would corrupt the file.\n"
+                           "\n"
+                           "Underlying error: " (.getMessage e)))
+                    "\n\n  " filepath)
+               {:filepath filepath}
+               e)))))) 
 
 (defn write-character-file
   [character savepath]
