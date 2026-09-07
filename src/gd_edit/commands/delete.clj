@@ -10,6 +10,8 @@
   (:import [com.sun.jna.platform FileUtils]
            [java.awt Desktop Desktop$Action]))
 
+(declare character-selection-screen!)
+
 (defn- move-to-trash!
   "Move a file or folder to the system trash. True when it actually went.
 
@@ -65,7 +67,15 @@
         (when (= (:meta-character-loaded-from @globals/character) (io/file savepath))
           (reset! globals/character {}))
 
-        (commands.choose-character/choose-or-manipulate-character-screen!)))))
+        ;; Stay on the delete menu, refreshed.
+        ;;
+        ;; This used to drop back to the character *selection* screen, which is
+        ;; a numbered list of the same characters that loads rather than deletes.
+        ;; Someone removing two characters would choose a number, get the second
+        ;; list, choose another number, and have loaded a character while
+        ;; believing they had deleted one -- the lists differ only in a line of
+        ;; text above them. Any other command still leaves the menu.
+        (character-selection-screen!)))))
 
 (defn- character-selection-screen
   []
