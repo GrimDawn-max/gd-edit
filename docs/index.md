@@ -14,12 +14,10 @@ This build supports the current game including the Fangs of Asterkarn expansion.
 
 ## Download
 
-Get the latest release for your platform:
+[Download the latest release :material-download:](https://github.com/GrimDawn-max/gd-edit/releases/latest){ .md-button .md-button--primary }
 
-[Downloads :material-download:](https://github.com/GrimDawn-max/gd-edit/releases/latest){ .md-button .md-button--primary }
-
-There are three files — `-windows.zip`, `-macos.zip` and `-linux.zip`. Take the
-one for your system.
+Each release has three files attached — `-windows.zip`, `-macos.zip` and
+`-linux.zip`. Take the one for your system.
 
 ## Installing
 

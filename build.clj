@@ -435,7 +435,7 @@
 
 ;; The upstream project published builds to the author's Dropbox and had the app
 ;; download them. Releases are now zips attached to a GitHub release, made by
-;; running `dist` and uploading the result -- see docs/RELEASING.md.
+;; running `dist` and uploading the result -- see RELEASING.md.
 
 (comment
 
