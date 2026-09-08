@@ -4,16 +4,14 @@ Type `help` at the prompt for this list inside the app, and `help <command>` for
 the detail on any one of them. The in-app help is authoritative — this page
 mirrors it.
 
-Commands are grouped by what you are trying to do rather than alphabetically.
-
 ---
 
-## Looking around
+## Basic commands
 
-### show
+### show / ls
 
 Navigate the save file as though it were a directory tree. Partial names match,
-so you rarely need to type a path in full.
+so you rarely need to type a path in full. `ls` is the same command.
 
 ```
 show                        the top level
@@ -33,6 +31,24 @@ matching what the game's tooltip says:
 Along with everything attached to it — component, completion bonus, augment,
 [ascended bonus](#ascended-bonuses), and the item's set if it belongs to one.
 
+### set
+
+Change a field, or create an item.
+
+```
+set character-name Bob
+set inv/1/items "Mythical Amatok's Step"
+set inv/1/items "Amatok's Step" 85          cap the level
+set inv/0/items/0/stack-count 99
+```
+
+Some fields understand names as well as record paths — a component can be named
+directly:
+
+```
+set inv/0/items/0/relic-name "Seal of Might"
+```
+
 ### find / find all
 
 Locate character data by name — items, equipment, skills, devotions.
@@ -42,26 +58,161 @@ find Amatok
 find all Amatok             search every character you have
 ```
 
-### db / q / qshow / qn
+### swap-variant
 
-Explore the game's own database rather than your save.
+Swap an item for one of its variants.
 
 ```
-db                          browse records
-q Class=="ItemRelic"        query with conditions
-qshow                       show the current page of results
-qn                          next page
+swap-variant inv/0/items/0
 ```
+
+### write
+
+```
+write                      save the character
+write NewName              save as a copy under a new name
+write stash                save the transfer stash
+ws                         alias for write stash
+```
+
+Nothing reaches the game until you write.
+
+### ws
+
+Alias for `write stash`.
+
+### load
+
+```
+load                       choose a character
+```
+
+### help
+
+```
+help                       every command, with a one-line description
+help set                   the detail on one command
+```
+
+### update
+
+```
+update
+```
+
+Checks whether a newer release exists and gives you the link. It does not
+download anything — a release is a zip you unzip yourself. gd-edit also tells you
+at startup when there is one.
+
+### exit
+
+Closes the program. Anything you have not [written](#write) is discarded.
 
 ---
 
-## Characters
+## Convenience commands
 
 ### level
 
 ```
 level 100
 ```
+
+### respec
+
+```
+respec                     everything
+respec attributes          refund attribute points
+respec skills              remove masteries and skills, refund the points
+respec devotions           remove devotions, refund the points
+```
+
+With no argument it does all three.
+
+There is also `respec hard`, which does the same as the default but removes the
+devotion entries from the character outright instead of leaving them in place
+disabled. The ordinary form is the one you want; `hard` exists for a character
+the normal respec leaves in a state the game will not accept.
+
+### shrine list / gate list
+
+```
+shrine list                every shrine the editor knows
+gate list                  every rift gate
+```
+
+To restore them on your character, `set` against the character's own lists. A
+name works, and so does the word **all**:
+
+```
+set shrines/0 all
+set teleporter-points/0 all
+```
+
+There is one list per difficulty, so repeat for each index you care about.
+Adding is idempotent — only missing entries are appended.
+
+---
+
+## Configuration commands
+
+### gamedir / savedir
+
+```
+gamedir "C:\Program Files (x86)\Steam\steamapps\common\Grim Dawn"
+savedir "C:\Users\You\Documents\My Games\Grim Dawn\save"
+gamedir clear
+savedir clear
+```
+
+Quotes matter when a path contains spaces.
+
+### mod
+
+```
+mod                        the mod currently selected
+mod pick                   choose an installed mod
+mod clear                  go back to the base game
+```
+
+### log
+
+Set how much gd-edit writes to `gd-edit.log`.
+
+```
+log                        the level in force
+log debug                  more detail, for chasing a problem
+log clear                  back to the default
+```
+
+Levels are `trace`, `debug`, `info`, `warn`, `error` and `fatal`. The default is
+`info`.
+
+### diag
+
+Check the setup: your Java version, whether the game directory was found, and
+whether the database and resource files gd-edit needs are where it expects.
+
+```
+diag
+```
+
+```
+✔ JVM version: 21.0.10+7
+✔ Game directory exists
+✔ File exists: .../database/database.arz
+✔ File exists: .../resources/Text_EN.arc
+✔ File exists: .../resources/Items.arc
+
+Looks good! The editor should be ready to go!
+```
+
+Worth running first if item creation or database queries are not working — a
+missing game directory is the usual cause.
+
+---
+
+## Class manipulation
 
 ### class
 
@@ -72,13 +223,35 @@ class add Soldier
 class remove Soldier
 ```
 
-### respec
+---
+
+## Item management commands
+
+### remove / rm
+
+Take an item out of a collection. `rm` is the same command.
 
 ```
-respec
+remove inv/0/items/3        the fourth item in the first bag
+rm inv/0/items/3            the same thing
 ```
 
-Refunds skill points. Devotion points are separate.
+A trailing `*` empties the collection:
+
+```
+remove inv/1/items/*
+```
+
+```
+Removed 29 items from "inventory-sacks/1/inventory-items"
+```
+
+Like every other change, this happens in memory — nothing reaches the save until
+you [`write`](#write).
+
+---
+
+## Character creation
 
 ### make-char
 
@@ -153,90 +326,9 @@ If the name matches more than one character — the same name in a local save an
 a cloud save, say — it lists them and does nothing, so you can name the path of
 the one you meant.
 
----
+### write character-list
 
-## Items
-
-### set
-
-Change a field, or create an item.
-
-```
-set character-name Bob
-set inv/1/items "Mythical Amatok's Step"
-set inv/1/items "Amatok's Step" 85          cap the level
-set inv/0/items/0/stack-count 99
-```
-
-Some fields understand names as well as record paths — a component can be named
-directly:
-
-```
-set inv/0/items/0/relic-name "Seal of Might"
-```
-
-### find-seed
-
-An item's stats are not stored in the save. What is stored is a **seed**, and
-the game works the numbers out from it when the item loads. So asking for
-particular stats means finding a seed that rolls them — which is what this does,
-across all 2,147,483,647 of them, in about fifteen seconds.
-
-```
-find-seed Mythical Amatok's Step
-find-seed Amatok's                 lists everything matching, to choose from
-```
-
-It offers two searches:
-
-1. **Get every stat as high as it will go.** Nothing to enter.
-2. **Set your own minimums.** You are shown each stat with its range and type a
-   minimum for the ones that matter.
-
-Then it builds the item, offering a blacksmith bonus and completion bonus
-*before* the search — those roll from the seed — and a component, augment and
-ascended bonus *after*, since those are fixed and cannot change which seed is
-best.
-
-### swap-variant
-
-Swap an item for one of its variants.
-
-```
-swap-variant inv/0/items/0
-```
-
-### remove / rm
-
-Take an item out of a collection. `rm` is the same command.
-
-```
-remove inv/0/items/3        the fourth item in the first bag
-rm inv/0/items/3            the same thing
-```
-
-A trailing `*` empties the collection:
-
-```
-remove inv/1/items/*
-```
-
-```
-Removed 29 items from "inventory-sacks/1/inventory-items"
-```
-
-Like every other change, this happens in memory — nothing reaches the save until
-you [`write`](#write).
-
-### batch item
-
-Create several copies of an item at once. Each copy is rolled separately, so you
-get a pile of different items — unlike `find-seed`, where every copy shares one
-seed and they are identical.
-
-```
-batch item 20 "Mythical Amatok's Step"
-```
+Export every character to a CSV file.
 
 ---
 
@@ -270,102 +362,32 @@ that is.
 
 ---
 
-## The world
+## Item rolls
 
-### shrine list / gate list
+### find-seed
 
-```
-shrine list                every shrine the editor knows
-gate list                  every rift gate
-```
-
-To restore them on your character, `set` against the character's own lists. A
-name works, and so does the word **all**:
+An item's stats are not stored in the save. What is stored is a **seed**, and
+the game works the numbers out from it when the item loads. So asking for
+particular stats means finding a seed that rolls them — which is what this does,
+across all 2,147,483,647 of them, in about fifteen seconds.
 
 ```
-set shrines/0 all
-set teleporter-points/0 all
+find-seed Mythical Amatok's Step
+find-seed Amatok's                 lists everything matching, to choose from
 ```
 
-There is one list per difficulty, so repeat for each index you care about.
-Adding is idempotent — only missing entries are appended.
+It offers two searches:
 
----
+1. **Get every stat as high as it will go.** Nothing to enter.
+2. **Set your own minimums.** You are shown each stat with its range and type a
+   minimum for the ones that matter.
 
-## Saving
+Then it builds the item, offering a blacksmith bonus and completion bonus
+*before* the search — those roll from the seed — and a component, augment and
+ascended bonus *after*, since those are fixed and cannot change which seed is
+best.
 
-### write
-
-```
-write                      save the character
-write NewName              save as a copy under a new name
-write stash                save the transfer stash
-ws                         alias for write stash
-```
-
-Nothing reaches the game until you write.
-
-### load
-
-```
-load                       choose a character
-```
-
-### write character-list
-
-Export every character to a CSV file.
-
----
-
-## Configuration
-
-### gamedir / savedir
-
-```
-gamedir "C:\Program Files (x86)\Steam\steamapps\common\Grim Dawn"
-savedir "C:\Users\You\Documents\My Games\Grim Dawn\save"
-gamedir clear
-savedir clear
-```
-
-Quotes matter when a path contains spaces.
-
-### mod
-
-```
-mod                        the mod currently selected
-mod pick                   choose an installed mod
-mod clear                  go back to the base game
-```
-
-### update
-
-```
-update
-```
-
-Checks whether a newer release exists and gives you the link. It does not
-download anything — a release is a zip you unzip yourself.
-
----
-
-## Running commands from a file
-
-### batch
-
-```
-batch path/to/commands.txt
-batch character path/to/commands.txt
-```
-
-`batch character` runs the same file against every character you have — useful
-for a change you want applied everywhere.
-
-A batch file is one command per line, exactly as you would type them.
-
----
-
-## Ascended bonuses
+### Ascended bonuses
 
 Fangs of Asterkarn added ascended affixes, applied at the altar in Kurnhold.
 gd-edit reads them, shows them, and can set them.
@@ -410,7 +432,7 @@ Either way it refuses an affix the altar could not have produced on that item �
 the check comes from the game's own tables, based on the item's rarity and
 category.
 
-### Nothing about an ascended bonus is random
+#### Nothing about an ascended bonus is random
 
 An ascended bonus is fixed. Every affix in the game states its numbers outright —
 there is not one value anywhere in the ascended affix data that rolls between a
@@ -421,7 +443,7 @@ So there is nothing to maximise here, which is why [`find-seed`](#find-seed) ask
 about the ascended bonus *after* it searches: the choice cannot change which seed
 is best.
 
-### Which affixes an item can get
+#### Which affixes an item can get
 
 Only **Common** and **Magic** items can receive the mastery affixes that add
 skill levels. Epic, Rare and Legendary items draw from a smaller pool granting
@@ -439,3 +461,73 @@ a roll:
 
 Picking a different affix is how you get a different number. The same affix always
 gives the same amount.
+
+---
+
+## Batch commands
+
+Run a file of commands, one per line, exactly as you would type them.
+
+### batch
+
+```
+batch path/to/commands.txt
+batch character path/to/commands.txt
+```
+
+`batch character` runs the same file against every character you have — useful
+for a change you want applied everywhere.
+
+### batch item
+
+Fill a slot with copies of an item.
+
+```
+batch item inv/1/items "Mythical Amatok's Step"
+batch item tra/0/items "Mythical Hammerfall Girdle"
+batch item inv/1/items "Amatok's Step" 85          cap the level
+```
+
+```
+Placed 16 items into inventory-sacks/1/inventory-items
+```
+
+The first argument is **where**, not how many: it creates as many as the slot
+holds. Each copy is rolled separately, so you get a pile of different items —
+unlike [`find-seed`](#find-seed), where every copy shares one seed and they are
+identical.
+
+### From the command line
+
+gd-edit can run a batch file without you sitting at the prompt:
+
+```
+gd-edit.exe -f "<path to player.gdc>" -b "<path to command file>"
+```
+
+Redirect the output to keep a record of what happened:
+
+```
+gd-edit.exe -f "<path to player.gdc>" -b "<path to command file>" > output.txt
+```
+
+`-f` names the save to load, `-b` the file of commands to run. `-h` lists the
+options. On macOS and Linux the launcher takes the same flags:
+`./gd-edit.sh -f ... -b ...`
+
+---
+
+## Database exploration
+
+These read the game's own database rather than your save.
+
+### db / q / qshow / qn
+
+Explore the game's own database rather than your save.
+
+```
+db                          browse records
+q Class=="ItemRelic"        query with conditions
+qshow                       show the current page of results
+qn                          next page
+```
