@@ -472,6 +472,50 @@ Then it builds the item, offering a blacksmith bonus and completion bonus
 ascended bonus *after*, since those are fixed and cannot change which seed is
 best.
 
+### Pet bonuses
+
+Some items carry a **Bonus to All Pets** — a second block of stats that applies
+to your pets rather than to you.
+
+```
+Bonus to All Pets
+  +8%  Health                   [7-9]
+  +50% to All Damage            [44-66]
+  44%  Aether Resistance        [32-48]
+  42%  Chaos Resistance         [32-48]
+  24%  Reduced Freeze Duration  [16-24]
+```
+
+**There is nothing to set.** Whether an item has one is a property of the item
+itself, so you cannot add a pet bonus to an item that lacks one, or swap the one
+it has. Around 1,200 records carry one; the rest never will.
+
+What you can control is **how well it rolls**, because it rolls from the item's
+seed — on a stream of its own, uncorrelated with the item's ordinary stats.
+
+That last part decides which tool to use:
+
+[`make-char --max-rolls`](#make-char)
+:   Scores the pet bonus alongside everything else. Nothing to do.
+
+[`find-seed`](#find-seed), **option 1** — *get each stat as high as it will go*
+:   Also scores it. This is the one you want for a pet item.
+
+[`find-seed`](#find-seed), **option 2** — *set your own minimums*
+:   Does **not** score the pet bonus. Your minimums apply to the item's own
+    stats, and among the seeds that satisfy them the pet bonus falls wherever it
+    happens to land.
+
+!!! note "Why it has to be scored deliberately"
+
+    Because the two streams are uncorrelated, a seed chosen only for the item's
+    own stats leaves the pet bonus to chance — and chance does badly across five
+    stats at once. On *Mogdrogen's Ardor* the best-for-the-item seed scores 0.56
+    on pets; searching both together finds seeds that max both.
+
+So for a pet item, prefer option 1 over option 2 unless you specifically need to
+force one of the item's own stats — and accept a worse pet bonus if you do.
+
 ### Ascended bonuses
 
 Fangs of Asterkarn added ascended affixes, applied at the altar in Kurnhold.
