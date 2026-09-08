@@ -208,9 +208,25 @@ swap-variant inv/0/items/0
 
 ### remove / rm
 
+Take an item out of a collection. `rm` is the same command.
+
 ```
-remove inv/0/items/3
+remove inv/0/items/3        the fourth item in the first bag
+rm inv/0/items/3            the same thing
 ```
+
+A trailing `*` empties the collection:
+
+```
+remove inv/1/items/*
+```
+
+```
+Removed 29 items from "inventory-sacks/1/inventory-items"
+```
+
+Like every other change, this happens in memory — nothing reaches the save until
+you [`write`](#write).
 
 ### batch item
 
