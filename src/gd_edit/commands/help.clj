@@ -208,7 +208,10 @@
               ["Syntax: find all <a-name>"
                ""
                "This command works in the same way as 'find' except it will look through"
-               "all characters that the editor is able to locate."])]
+               "all characters that the editor is able to locate."
+               ""
+               "Example:"
+               "  find all tonic"])]
    ["load"  "Load from a save file"
     (str/join "\n"
               ["Load a character file"
@@ -239,23 +242,78 @@
                ""
                "Makes a copy of the currently loaded character."
                "If the the optional \"mod\" flag is added, the character will be saved as a"
-               "mod character"])]
+               "mod character"
+               ""
+               "Examples:"
+               "  write                    save the loaded character"
+               "  write Bob                save a copy named Bob, leaving the original"
+               "  write Bob mod            save the copy as a mod character"
+               ""
+               "Nothing you have changed reaches the save until you run this."])]
    ["write stash" "Writes out the transfer stash if it is loaded"]
    ["ws" "Alias for \"write stash\""]
    ["write character-list" "Writes all characters to a csv file"
     (str/join "\n"
-              ["Syntax: write character-list <filename>"])]
-   ["class" "Displays the classes/masteries of the loaded character"]
-   ["class list" "Display classes/masteries known ot the editor"]
-   ["class add" "Add a class/mastery by name"]
-   ["class remove" "Remove a class/mastery by name"]
+              ["Syntax: write character-list <filename>"
+               ""
+               "Writes one row per character -- name, level, class, and so on -- to a csv"
+               "file you can open in a spreadsheet."
+               ""
+               "Example:"
+               "  write character-list characters.csv"])]
+   ["class" "Displays the classes/masteries of the loaded character"
+    (str/join "\n"
+              ["Syntax: class"
+               ""
+               "Example:"
+               "  class"
+               ""
+               "  classes:"
+               "    Occultist"
+               "    Shaman"])]
+   ["class list" "Display classes/masteries known to the editor"
+    (str/join "\n"
+              ["Syntax: class list"
+               ""
+               "Lists every mastery the editor knows, including any added by an active mod."
+               "These are the names \"class add\" and \"class remove\" accept."])]
+   ["class add" "Add a class/mastery by name"
+    (str/join "\n"
+              ["Syntax: class add <mastery name>"
+               ""
+               "Example:"
+               "  class add Necromancer"
+               ""
+               "Use \"class list\" to see the names available."])]
+   ["class remove" "Remove a class/mastery by name"
+    (str/join "\n"
+              ["Syntax: class remove <mastery name>"
+               ""
+               "Example:"
+               "  class remove Necromancer"
+               ""
+               "Skill points spent in that mastery are refunded."])]
    ["savedir" "Sets the save game directory to a path"
     (str/join "\n"
-              ["Syntax: savedir <full path to save game directory>"])]
+              ["Syntax: savedir <full path to save game directory>"
+               ""
+               "Examples:"
+               "  savedir \"C:\\Users\\You\\Documents\\My Games\\Grim Dawn\\save\""
+               "  savedir \"~/Documents/My Games/Grim Dawn/save\""
+               "  savedir                  show the directory in use"
+               ""
+               "Quote the path if it contains spaces."])]
    ["savedir clear" "Removes the previous set game directory"]
    ["gamedir" "Sets the game installation directory to a path"
     (str/join "\n"
-              ["Syntax: gamedir <full path to save game installation directory>"])]
+              ["Syntax: gamedir <full path to game installation directory>"
+               ""
+               "Examples:"
+               "  gamedir \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Grim Dawn\""
+               "  gamedir                  show the directory in use"
+               ""
+               "Quote the path if it contains spaces. Run \"diag\" to check that the"
+               "directory gd-edit found actually holds the files it needs."])]
    ["gamedir clear" "Removes the previously set game installation directory"]
    ["mod" "Displays the mod currently selected"]
    ["mod pick" "Picks an installed mod to activate"]
@@ -268,7 +326,10 @@
                "- character level"
                "- attribute points"
                "- skill points"
-               "- experience points"])]
+               "- experience points"
+               ""
+               "Example:"
+               "  level 100"])]
    ["respec" "Respecs the loaded character"
     (str/join "\n"
               ["Syntax: respec <respec-type>"
@@ -289,7 +350,12 @@
                "Target type is an optional parameter and can be any of the following: "
                "\tbasename, prefix, suffix."
                "If a target type isn't specified, it's assumed that the user wants to"
-               "change the basename of the item."])]
+               "change the basename of the item."
+               ""
+               "Examples:"
+               "  swap-variant inv/0/items/0            swap the item itself"
+               "  swap-variant inv/0/items/0 prefix     swap only its prefix"
+               "  swap-variant inv/0/items/0 suffix     swap only its suffix"])]
 
    ["batch" "Executes commands in a batch file"
     (str/join "\n"
@@ -297,13 +363,49 @@
                ""
                "The batch file can contain any command the editor is able to deal with."
                "After running through the commands, control will return back to the"
-               "command-prompt."])]
+               "command-prompt."
+               ""
+               "Example:"
+               "  batch /path/to/commands.txt"
+               ""
+               "A batch file holds one command per line, exactly as you would type them:"
+               ""
+               "  set character-level 100"
+               "  set inv/1/items \"Mythical Amatok's Step\""
+               "  write"
+               ""
+               "Running a batch file without sitting at the prompt"
+               "--------------------------------------------------"
+               "gd-edit takes three command-line options:"
+               ""
+               "  -f, --file SAVE_FILE_PATH    save file to load on start"
+               "  -b, --batch BATCH_FILE_PATH  batch file to run"
+               "  -h, --help                   show these options and exit"
+               ""
+               "  gd-edit.exe -f \"<path to player.gdc>\" -b \"<path to commands.txt>\""
+               ""
+               "Redirect the output if you want a record of what happened:"
+               ""
+               "  gd-edit.exe -f \"<save>\" -b \"<commands.txt>\" > output.txt"
+               ""
+               "On macOS and Linux the launcher takes the same options:"
+               ""
+               "  ./gd-edit.sh -f \"<save>\" -b \"<commands.txt>\""
+               ""
+               "Quote any path containing spaces. These are the only command-line"
+               "options; everything else is driven from the prompt."])]
 
    ["batch character" "Execute commands in batch file for all known characters"
     (str/join "\n"
               ["Syntax: batch character <path-to-batch-file>"
                ""
-               "Load each character file found by the editor, run the commands indicated by the batch file, then write the character file before proceeding to the next character."])]
+               "Load each character file found by the editor, run the commands indicated by the batch file, then write the character file before proceeding to the next character."
+               ""
+               "Example:"
+               "  batch character /path/to/commands.txt"
+               ""
+               "Note that this one writes each character as it goes -- unlike every other"
+               "command, the changes are saved without you running \"write\"."])]
 
    ["batch item" "Batch creates several copies of the specified item"
     (str/join "\n"
@@ -312,7 +414,19 @@
                "If it is possible to create the specified item, this command will place as many"
                "copies as it is possible to fit into specified container."
                ""
-               "Note that the expected parameters are the same as the item creation variant of \"set\"."])]
+               "Note that the expected parameters are the same as the item creation variant of \"set\"."
+               ""
+               "Examples:"
+               "  batch item inv/1/items \"Mythical Amatok's Step\""
+               "  batch item tra/0/items \"Mythical Hammerfall Girdle\""
+               "  batch item inv/1/items \"Amatok's Step\" 85"
+               ""
+               "The first parameter is where to put them, not how many -- it fills the"
+               "container. The last example caps the item at level 85."
+               ""
+               "  Placed 16 items into inventory-sacks/1/inventory-items"
+               ""
+               "Each copy is rolled separately, so they differ from one another."])]
 
    ["shrine list" "Lists all known shrines"
     (str/join "\n"
