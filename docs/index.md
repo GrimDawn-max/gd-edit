@@ -140,6 +140,11 @@ Distributed under the Eclipse Public License, the same licence as the original.
 
 gd-edit is a command line editor. If that is not what you want:
 
+[**GD Defiler**](https://forums.crateentertainment.com/t/tool-gd-defiler/28264)
+:   A save editor with a window rather than a prompt — characters, stats, items
+    and stash. Windows only. Updated in July 2026 for the 1.3 save format, so it
+    reads current saves.
+
 [**GD Stash**](https://forums.crateentertainment.com/t/tool-gd-stash/29036)
 :   A Java application for storing items outside your transfer stash, with
     browsing, filtering and a database of items. Also edits characters.
