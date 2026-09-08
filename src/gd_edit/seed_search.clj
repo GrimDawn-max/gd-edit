@@ -161,6 +161,32 @@
   (let [j (get record "lootRandomizerJitter")]
     (if (number? j) (double j) base-jitter)))
 
+(defn- sum-candidates
+  "Hypotheses for a field two records both contribute to.
+
+  The engine rolls each contribution separately and adds them, so no single draw
+  explains the total. Two adjacent draws can: that is what the PAIRMAX models
+  already compute, and they only ever paired a record with itself. Pairing across
+  the two records -- each with its own base and its own jitter -- is the same
+  arithmetic applied to the case the fitter was blind to.
+
+  Both orderings are offered because which contribution is drawn first is not
+  something we get to assume. A hypothesis still has to explain every sample, and
+  the finished plan is checked again on seeds it never saw, so a wrong pairing is
+  rejected rather than believed."
+  [ra rb field]
+  (let [ba (get ra field), bb (get rb field)]
+    (when (and (number? ba) (number? bb))
+      (for [[r1 b1 r2 b2] [[ra ba rb bb] [rb bb ra ba]]
+            :let [j1 (jitter-of r1), j2 (jitter-of r2)
+                  b1 (double b1), b2 (double b2)
+                  sp1 (spread-of b1 j1), sp2 (spread-of b2 j2)]
+            model [MODEL-PAIRMAX-PLAIN MODEL-PAIRMAX]
+            k (range 1 max-draw)]
+        {:field field :model model :draw k :jitter j1
+         :base b1 :spread sp1 :modulus (inc (* 2 sp1))
+         :base2 b2 :spread2 sp2 :modulus2 (inc (* 2 sp2))}))))
+
 (defn- candidates
   "Every (model, draw) hypothesis worth testing for `field`."
   [record field ^double base]
@@ -245,7 +271,9 @@
            (update plan :fixed assoc field (double (first observed)))
 
            collision?
-           (update plan :unfittable conj field)
+           (if-let [hit (first (filter fits? (sum-candidates (first sources) (second sources) field)))]
+             (update plan :entries conj hit)
+             (update plan :unfittable conj field))
 
            (nil? base)
            (update plan :unfittable conj field)
