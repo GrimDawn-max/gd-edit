@@ -16,13 +16,26 @@
 
   A pet bonus rolls from the same seed on a stream of its own and is
   uncorrelated with the item's own roll, so a search that ignored it would leave
-  it to chance -- and chance does badly."
+  it to chance -- and chance does badly.
+
+  A pet bonus can be carried by the item or by its prefix -- 450 records and 326
+  respectively -- so the caller passes whichever record holds one."
   [record]
   (when-let [pet (some-> (get record "petBonusName") not-empty dbu/record-by-name)]
     (let [order (map first (:values (item-stats/pet-bonus
                                      record
                                      {:basename (:recordname record) :seed 1})))]
       (ss/aux-stream pet order 20.0))))
+
+(defn- pet-auxes
+  "Every pet bonus this item carries, from the item itself and from its affixes."
+  [item record]
+  (->> [record
+        (some-> (:prefix-name item) not-empty dbu/record-by-name)
+        (some-> (:suffix-name item) not-empty dbu/record-by-name)]
+       (remove nil?)
+       (keep pet-aux)
+       vec))
 
 (defn completion-aux
   "Scoring arrays for a relic's completion bonus, or nil.
@@ -52,9 +65,13 @@
   (try
     (when (item-stats/available?)
       (when-let [record (dbu/record-by-name (:basename item))]
-        (when-let [plan (ss/fit-plan record (some-> (:modifier-name item) not-empty))]
+        (when-let [plan (ss/fit-plan record
+                                    (some-> (:modifier-name item) not-empty)
+                                    (some-> (:prefix-name item) not-empty)
+                                    (some-> (:suffix-name item) not-empty))]
           (when (seq (ss/searchable-fields plan))
-            (let [auxes (vec (remove nil? [(pet-aux record) (completion-aux item)]))
+            (let [auxes (vec (remove nil? (concat (pet-auxes item record)
+                                                  [(completion-aux item)])))
                   compiled (cond-> (ss/compile-best plan)
                              (seq auxes) (assoc :aux auxes))]
               (first (ss/search-best compiled 1)))))))

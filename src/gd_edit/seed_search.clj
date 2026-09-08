@@ -136,10 +136,11 @@
 (def ^:private base-jitter 20.0)
 
 (defn- engine-values
-  ([recordname seed] (engine-values recordname seed ""))
-  ([recordname seed modifier]
+  ([recordname seed] (engine-values recordname seed "" nil nil))
+  ([recordname seed modifier] (engine-values recordname seed modifier nil nil))
+  ([recordname seed modifier prefix suffix]
    (item-stats/rolled-stats {:basename recordname :seed seed
-                             :prefix-name "" :suffix-name ""
+                             :prefix-name (or prefix "") :suffix-name (or suffix "")
                              :modifier-name (or modifier "")})))
 
 (defn- draws-for
@@ -149,23 +150,35 @@
       (persistent! acc)
       (recur (inc i) (step s) (conj! acc s)))))
 
+(defn- jitter-of
+  "How widely a record's values roll.
+
+  The base item has no lootRandomizerJitter and uses the engine's default. An
+  affix carries its own -- 15% on one prefix, 12% on the suffix beside it -- so
+  fitting an affix's stat with the item's spread tests the wrong hypotheses and
+  explains nothing."
+  ^double [record]
+  (let [j (get record "lootRandomizerJitter")]
+    (if (number? j) (double j) base-jitter)))
+
 (defn- candidates
   "Every (model, draw) hypothesis worth testing for `field`."
   [record field ^double base]
-  (let [spread  (spread-of base base-jitter)
+  (let [jit     (jitter-of record)
+        spread  (spread-of base jit)
         modulus (inc (* 2 spread))
         common  {:field field :base base :spread spread :modulus modulus
-                 :jitter base-jitter}
+                 :jitter jit}
         pair    (when (and (string? field) (.endsWith ^String field "Max"))
                   (let [stem (subs field 0 (- (count field) 3))
                         bmin (get record (str stem "Min"))]
                     (when bmin
                       (let [bmin (double bmin)
                             span (max 0.0 (- base bmin))
-                            sp2  (spread-of span base-jitter)]
+                            sp2  (spread-of span jit)]
                         {:base bmin
-                         :spread (spread-of bmin base-jitter)
-                         :modulus (inc (* 2 (spread-of bmin base-jitter)))
+                         :spread (spread-of bmin jit)
+                         :modulus (inc (* 2 (spread-of bmin jit)))
                          :base2 span :spread2 sp2 :modulus2 (inc (* 2 sp2))}))))]
     (concat
      (for [k (range 1 (inc max-draw))] (assoc common :model MODEL-PLAIN :draw k))
@@ -183,17 +196,23 @@
 
   Returns {:scale :entries :fixed :unfittable}. Entries carry everything the
   search loop needs, so the loop never touches a record or a map."
-  ([record] (fit-plan record nil))
-  ([record modifier]
+  ([record] (fit-plan record nil nil nil))
+  ([record modifier] (fit-plan record modifier nil nil))
+  ([record modifier prefix suffix]
    (let [recordname (:recordname record)
         scale   (double (or (get record "attributeScalePercent") 0.0))
         ;; Fitted for the item as it will actually be built. A blacksmith bonus
         ;; consumes draws of its own and shifts every stat after it, so a plan
-        ;; fitted without one describes a different item.
+        ;; fitted without one describes a different item. The same is true of a
+        ;; prefix and a suffix, and most of an affixed item's value can live in
+        ;; them -- on a pendant with both, only one of seven rolled stats came
+        ;; from the item itself.
         modrec  (when (seq (str modifier)) (dbu/record-by-name modifier))
+        prerec  (when (seq (str prefix)) (dbu/record-by-name prefix))
+        sufrec  (when (seq (str suffix)) (dbu/record-by-name suffix))
         samples (vec (for [seed fit-seeds]
                        {:draws (draws-for seed max-draw)
-                        :stats (engine-values recordname seed modifier)}))
+                        :stats (engine-values recordname seed modifier prefix suffix)}))
         fields  (sort (distinct (mapcat (comp keys :stats) samples)))
         fits?   (fn [entry]
                   (let [k (long (:draw entry))]
@@ -205,7 +224,14 @@
                             samples)))]
     (reduce
      (fn [plan field]
-       (let [record (if (and modrec (contains? modrec field)) modrec record)
+       (let [;; Which record supplies this field's base value? Exactly one must,
+             ;; because the engine sums the contributions and a sum cannot be
+             ;; explained by a single draw -- a field two records both define is
+             ;; left unfittable rather than fitted to something plausible and
+             ;; wrong.
+             sources (filterv #(and % (contains? % field)) [record prerec sufrec modrec])
+             collision? (> (count sources) 1)
+             record (or (first sources) record)
              observed (map #(get (:stats %) field) samples)
              ;; A stat with a single value carries only a Min on the record, yet
              ;; the engine still reports a Max -- the same number. Rolling that
@@ -218,6 +244,9 @@
            (apply = observed)
            (update plan :fixed assoc field (double (first observed)))
 
+           collision?
+           (update plan :unfittable conj field)
+
            (nil? base)
            (update plan :unfittable conj field)
 
@@ -226,7 +255,7 @@
              (update plan :entries conj hit)
              (update plan :unfittable conj field)))))
      {:scale scale :entries [] :fixed {} :unfittable []
-      :recordname recordname :modifier modifier}
+      :recordname recordname :modifier modifier :prefix prefix :suffix suffix}
      fields))))
 
 (defn plan-valid?
@@ -238,7 +267,7 @@
   (let [{:keys [scale entries fixed recordname]} plan]
     (every?
      (fn [seed]
-       (let [actual (engine-values recordname seed (:modifier plan))
+       (let [actual (engine-values recordname seed (:modifier plan) (:prefix plan) (:suffix plan))
              draws  (draws-for seed max-draw)]
          (and (every? (fn [[f v]] (== (double v) (double (get actual f 0)))) fixed)
               (every? (fn [e]

@@ -169,6 +169,19 @@
     [(score-of fields)
      (score-of (keys ranges))]))
 
+(defn- item-for
+  "The item as it will actually be built: base, seed, and everything chosen.
+
+  Every stat shown or scored has to come from this rather than from the bare
+  base record. An affix shifts the draw stream, so the numbers for a prefixed
+  item are not the numbers for the same item without one."
+  [record seed extras]
+  (merge {:basename (:recordname record) :seed seed
+          :prefix-name "" :suffix-name "" :modifier-name ""
+          :relic-name "" :relic-bonus "" :augment-name ""}
+         extras
+         {:seed seed}))
+
 (defn- bonus-quality
   "How good a seed's pet and completion bonuses are, from 0 to 1.
 
@@ -239,10 +252,8 @@
   the only thing that makes choosing between them meaningful -- showing only the
   stats you constrained made three identical-looking options out of three
   genuinely different items. A marker flags the ones you set a minimum on."
-  [record idx seed asked-for all-fields ranges]
-  (let [stats (item-stats/rolled-stats {:basename (:recordname record) :seed seed
-                                        :prefix-name "" :suffix-name ""
-                                        :modifier-name ""})
+  [record idx seed asked-for all-fields ranges extras]
+  (let [stats (item-stats/rolled-stats (item-for record seed extras))
         asked (set asked-for)]
     (u/print-line (format "  %d. seed %s" idx (yellow seed)))
     (doseq [f all-fields]
@@ -355,6 +366,20 @@
        (sort-by first)
        vec))
 
+(defn- affix-candidates
+  "The prefixes or suffixes that can be chosen, as [label record] pairs.
+
+  Offered because an affix is not something that can be added afterwards. It
+  consumes draws of its own and shifts every stat after it, so putting one on a
+  finished item with `set` leaves a seed chosen for a different item -- on a
+  pendant tested here, an unaffixed roll with every stat at maximum dropped to
+  one of six once its prefix and suffix were added."
+  [affix-type]
+  (->> (item/affix-name-idx-by-type affix-type)
+       (keep (fn [[nm rec]] (when (and nm rec) [nm rec])))
+       (sort-by first)
+       vec))
+
 (defn- blacksmith-candidates []
   (->> (records-under "records/items/lootaffixes/crafting/")
        (filter rolls?)
@@ -389,7 +414,7 @@
                       (format "  (%s is at the top of its range)" (green "green"))))
       (u/print-line)
       (doseq [[i s] (map-indexed vector hits)]
-        (show-result record (inc i) s asked-for all-fields ranges))
+        (show-result record (inc i) s asked-for all-fields ranges extras))
       (u/print-line)
       (let [pick (prompt (format "Create which one? [1-%d, blank to cancel]: " (count hits)))]
         (when-let [n (try (Integer/parseInt pick) (catch Exception _ nil))]
@@ -439,9 +464,7 @@
             all-fields (->> (:entries plan) (sort-by :draw) (mapv :field))
             asked    (filterv #(contains? minimums %) all-fields)
             stats-of (fn [seed]
-                       (item-stats/rolled-stats
-                        {:basename (:recordname record) :seed seed
-                         :prefix-name "" :suffix-name "" :modifier-name ""}))]
+                       (item-stats/rolled-stats (item-for record seed extras)))]
         (u/print-line)
         (u/print-line (format "Searching %,d seeds..." ss/seed-space))
         (let [t0 (System/nanoTime)
@@ -510,9 +533,7 @@
                                    progress)))
           secs (/ (- (System/nanoTime) t0) 1e9)
           maxed (fn [seed]
-                  (let [st (item-stats/rolled-stats
-                            {:basename (:recordname record) :seed seed
-                             :prefix-name "" :suffix-name "" :modifier-name ""})]
+                  (let [st (item-stats/rolled-stats (item-for record seed extras))]
                     (count (filter (fn [f]
                                      (let [[_ hi] (get ranges f) v (get st f)]
                                        (and hi v (>= (shown-value v) (shown-value hi)))))
@@ -560,9 +581,12 @@
           ;; shifts every stat after it, so the plan has to be fitted with it in
           ;; place; a completion bonus rolls on a stream of its own and is
           ;; scored alongside everything else.
-          (let [blacksmith (choose-from "Add a blacksmith bonus" (blacksmith-candidates))
+          (let [prefix (choose-from "Add a prefix" (affix-candidates :prefix))
+                suffix (choose-from "Add a suffix" (affix-candidates :suffix))
+                blacksmith (choose-from "Add a blacksmith bonus" (blacksmith-candidates))
                 completion (choose-from "Add a completion bonus" (completion-candidates record))
-                plan (ss/fit-plan record (:recordname blacksmith))
+                plan (ss/fit-plan record (:recordname blacksmith)
+                                  (:recordname prefix) (:recordname suffix))
                 completion-aux
                 (when completion
                   (let [jit (double (or (get completion "lootRandomizerJitter") 0.0))
@@ -571,6 +595,8 @@
                                       :prefix-name "" :suffix-name "" :modifier-name ""}))]
                     (ss/aux-stream completion order jit)))
                 extras (cond-> {}
+                         prefix     (assoc :prefix-name (:recordname prefix))
+                         suffix     (assoc :suffix-name (:recordname suffix))
                          blacksmith (assoc :modifier-name (:recordname blacksmith))
                          completion (assoc :relic-bonus (:recordname completion)))]
             (cond
