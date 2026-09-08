@@ -12,11 +12,31 @@
     (u/print-line (green (str "✔ " text)))
     (u/print-line (red   (str "✖ " text)))))
 
+(def ^:private min-java
+  "The oldest JVM gd-edit runs on, matching MIN_JAVA in the launchers."
+  17)
+
+(defn- java-major
+  "The major version of a JVM version string.
+
+  Java 8 and earlier report \"1.8.0_402\", where the major version is the second
+  component; everything since reports \"17.0.18+0\", where it is the first."
+  [version]
+  (let [parts (map #(Long/parseLong %) (re-seq #"\d+" (str version)))]
+    (when (seq parts)
+      (let [[a b] parts]
+        (if (and (= a 1) b) b a)))))
+
 (defn- verify-jvm-version
   []
 
   (let [jvm-version (System/getProperty "java.runtime.version")
-        result (str/starts-with? jvm-version "1.8")
+        major (java-major jvm-version)
+        ;; This used to pass only on Java 1.8 -- the floor when it was written,
+        ;; and now a version that cannot load these classes at all. It failed
+        ;; every supported JVM and told people to install the one JVM that will
+        ;; not work.
+        result (and major (>= major min-java))
         test-info (str "JVM version: " jvm-version)]
 
     [result test-info]))
@@ -71,7 +91,7 @@
   []
 
   (let [tests [[[verify-jvm-version]
-                (yellow "Please make sure you're running Java 1.8 or above")]
+                (yellow (format "gd-edit needs Java %d or newer. See https://adoptium.net/" min-java))]
 
                [[verify-game-dir-present]
                 (yellow "Please use the 'gamedir' command to help the editor find your game installation directory")]
