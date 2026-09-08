@@ -270,8 +270,20 @@ set skill-points 50
 set devotion-points 55
 ```
 
-Alongside them: `skill-points-reclaimed`, `devotion-points-reclaimed`,
-`devotion-shrines-unlocked` and `attribute-points`.
+`attribute-points` works the same way. `total-devotion-points-unlocked` records
+how many the character has earned in total, as opposed to how many are unspent.
+
+Two nearby fields are bookkeeping rather than pools, and are better left alone:
+
+`skill-points-reclaimed` and `devotion-points-reclaimed`
+:   How many points the character has refunded over its life. The game tracks
+    these; gd-edit only reads and writes them.
+
+`devotion-shrines-unlocked`
+:   A **statistic**, not a pool. It sits with `hero-kills`, `relics-crafted` and
+    `lore-notes-collected` in the character's tally of things done, and changing
+    it grants nothing. Restoring shrines on a character is
+    [`set shrines/0 all`](#shrine-list--gate-list).
 
 ### Spend them in the game
 
