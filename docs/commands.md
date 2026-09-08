@@ -225,6 +225,79 @@ class remove Soldier
 
 ---
 
+## Skills and devotions
+
+There is no `skill` command. Skills and devotions are entries in the character's
+`skills` collection, edited with [`find`](#find-find-all) and [`set`](#set) like
+anything else.
+
+### Changing a skill you already have
+
+Find it by name, then set its level:
+
+```
+find Wendigo
+```
+
+```
+Wendigo Spirit: inventory-sacks/0/inventory-items/48
+Wendigo Totem: skills/30
+```
+
+```
+set skills/30/level 16
+```
+
+### Telling skills and devotions apart
+
+Both live in the same collection. `devotion-level` is what separates them:
+
+| | `devotion-level` | taken looks like |
+|---|---|---|
+| mastery skill | `0` | `level` is the points invested |
+| devotion node | `1` | `level 1`, `enabled true` |
+
+An untaken devotion node still appears, sitting at `level 0` with
+`enabled false` — that is also how [`respec`](#respec) leaves them, disabled
+rather than removed.
+
+### Points
+
+The pools are ordinary top-level fields:
+
+```
+set skill-points 50
+set devotion-points 55
+```
+
+Alongside them: `skill-points-reclaimed`, `devotion-points-reclaimed`,
+`devotion-shrines-unlocked` and `attribute-points`.
+
+### Spend them in the game
+
+!!! tip "The easier route"
+
+    Give yourself the points with `set`, [`write`](#write), then spend them at a
+    trainer and in the devotion screen.
+
+Three reasons that is better than editing the skills directly:
+
+**You can only edit what is already there.** A mastery skill the character has
+never put a point into has no entry at all, so there is nothing for `set` to
+change. Creating one needs [`make-char`](#make-char); there is no command for it.
+
+**Nothing is checked.** gd-edit writes what you tell it. It does not verify you
+have the points, or that a devotion's affinity requirements are met.
+
+**Affinity is not stored.** The save has no affinity field — the game works it
+out from the nodes you hold. So a hand-assembled set of devotions can be one the
+game's own rules would never have allowed, and gd-edit has no way to warn you.
+
+Spending in the game avoids all three: the rules are enforced as you click, and
+the constellation screen shows affinity accumulating as you go.
+
+---
+
 ## Item management commands
 
 ### remove / rm
