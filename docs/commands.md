@@ -502,9 +502,10 @@ That last part decides which tool to use:
 :   Also scores it. This is the one you want for a pet item.
 
 [`find-seed`](#find-seed), **option 2** — *set your own minimums*
-:   Does **not** score the pet bonus. Your minimums apply to the item's own
-    stats, and among the seeds that satisfy them the pet bonus falls wherever it
-    happens to land.
+:   Scores it too, but later and over less ground. The search itself filters on
+    your minimums only; the pet bonus is then used to rank the matches it
+    gathered — a pool of up to a thousand — rather than being an objective
+    across the whole seed space.
 
 !!! note "Why it has to be scored deliberately"
 
@@ -513,8 +514,11 @@ That last part decides which tool to use:
     stats at once. On *Mogdrogen's Ardor* the best-for-the-item seed scores 0.56
     on pets; searching both together finds seeds that max both.
 
-So for a pet item, prefer option 1 over option 2 unless you specifically need to
-force one of the item's own stats — and accept a worse pet bonus if you do.
+So for a pet item option 1 does the more thorough job, since it optimises the
+pet bonus across every seed rather than across the matches a filter happened to
+collect. Option 2 is still the right choice when you need to force one of the
+item's own stats — it will not ignore the pet bonus, it just has less to choose
+from.
 
 ### Ascended bonuses
 
