@@ -511,9 +511,24 @@ Redirect the output to keep a record of what happened:
 gd-edit.exe -f "<path to player.gdc>" -b "<path to command file>" > output.txt
 ```
 
-`-f` names the save to load, `-b` the file of commands to run. `-h` lists the
-options. On macOS and Linux the launcher takes the same flags:
-`./gd-edit.sh -f ... -b ...`
+`-f` names the save to load and `-b` the file of commands to run. On macOS and
+Linux the launcher takes the same flags: `./gd-edit.sh -f ... -b ...`
+
+These are gd-edit's only command-line options, and `-h` lists them:
+
+```
+gd-edit.exe -h
+```
+
+```
+The valid options are:
+  -f, --file SAVE_FILE_PATH    Save file to load on start
+  -b, --batch BATCH_FILE_PATH  Batch file to run
+  -h, --help                   Show this help text
+```
+
+`-h` is not specific to batch — it prints this and exits, whatever else you pass.
+Everything else gd-edit does is driven from the prompt, not from flags.
 
 ---
 
