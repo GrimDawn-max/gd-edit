@@ -461,6 +461,10 @@ find-seed Mythical Amatok's Step
 find-seed Amatok's                 lists everything matching, to choose from
 ```
 
+It builds the item **without a prefix or suffix**. That is worth knowing if you
+are trying to reproduce an affixed item from a build: `find-seed` will give you
+the unaffixed version of it, not a maximised version of the one you had.
+
 It offers two searches:
 
 1. **Get every stat as high as it will go.** Nothing to enter.
