@@ -496,7 +496,8 @@ seed — on a stream of its own, uncorrelated with the item's ordinary stats.
 That last part decides which tool to use:
 
 [`make-char --max-rolls`](#make-char)
-:   Scores the pet bonus alongside everything else. Nothing to do.
+:   Scores the pet bonus on the **base item** alongside its other stats. A pet
+    bonus carried by the item's *prefix* is not scored — see below.
 
 [`find-seed`](#find-seed), **option 1** — *get each stat as high as it will go*
 :   Also scores it. This is the one you want for a pet item.
@@ -506,6 +507,21 @@ That last part decides which tool to use:
     your minimums only; the pet bonus is then used to rank the matches it
     gathered — a pool of up to a thousand — rather than being an objective
     across the whole seed space.
+
+!!! warning "Prefixes are outside the search"
+
+    A pet bonus can come from the item itself (450 records) or from its prefix
+    (326 records). Only the item's own is optimised: the search is fitted to the
+    base record and never sees the affixes, so a prefix's pet bonus — and the
+    prefix's ordinary stats — land wherever the chosen seed puts them.
+
+    This only affects [`make-char`](#make-char), whose items come from GrimTools
+    with their affixes. [`find-seed`](#find-seed) builds items without a prefix
+    or suffix, so the only pet bonus present is the base item's and it is fully
+    optimised.
+
+    The seed chosen is still a good one — the base item's stats do reach their
+    maximum with the prefix applied — it simply optimises less than everything.
 
 !!! note "Why it has to be scored deliberately"
 
