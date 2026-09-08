@@ -283,7 +283,7 @@ Two nearby fields are bookkeeping rather than pools, and are better left alone:
 :   A **statistic**, not a pool. It sits with `hero-kills`, `relics-crafted` and
     `lore-notes-collected` in the character's tally of things done, and changing
     it grants nothing. Restoring shrines on a character is
-    [`set shrines/0 all`](#shrine-list--gate-list).
+    [`set shrines/0 all`](#shrine-list-gate-list).
 
 ### Spend them in the game
 
