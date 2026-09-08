@@ -519,13 +519,17 @@ That last part decides which tool to use:
     base record and never sees the affixes, so a prefix's pet bonus — and the
     prefix's ordinary stats — land wherever the chosen seed puts them.
 
-    This only affects [`make-char`](#make-char), whose items come from GrimTools
-    with their affixes. [`find-seed`](#find-seed) builds items without a prefix
-    or suffix, so the only pet bonus present is the base item's and it is fully
-    optimised.
+    **The item's own pet bonus is optimised either way.** Carrying a prefix does
+    not stop that — only a pet bonus belonging to the prefix goes unscored.
 
-    The seed chosen is still a good one — the base item's stats do reach their
-    maximum with the prefix applied — it simply optimises less than everything.
+    **And it cannot arise on an Epic or Legendary**, because those do not roll
+    affixes at all. Only Common items and monster infrequents carry a prefix, so
+    a build equipping Epics and Legendaries is fully optimised. It is worth
+    knowing about for a build leaning on monster infrequents.
+
+    It also cannot arise in [`find-seed`](#find-seed), which builds items with no
+    prefix or suffix. Only [`make-char`](#make-char) is affected, whose items
+    come from GrimTools with whatever affixes they had.
 
 !!! note "Why it has to be scored deliberately"
 
