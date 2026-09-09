@@ -363,6 +363,27 @@ make-char ~/Downloads/get_build_data.php.json
 The [FAQ](faq.md#make-char-cannot-reach-grimtools) walks through it. Note that
 the file to save is the build *data*, not the calculator page.
 
+### Rift gates
+
+`make-char` unlocks every rift gate on all three difficulties, and says so:
+
+```
+Setting all 72 rift gates...
+```
+
+Without this a built character inherits only the template's gates, which do not
+include the Fangs of Asterkarn ones — the expansion's map is visible but none of
+it can be reached.
+
+It matters for more than travel. Grim Dawn sets your respawn point when you
+arrive somewhere, so a character with no gate to that town also has no way to
+change where it starts: it stays wherever the template last stood, which is the
+Forgotten Gods town. Unlocking the gates leaves the choice with you — travel to
+Kurnhold, or anywhere else, once and the game starts you there from then on.
+
+Nothing else about the character's progress is touched. Quests are not completed
+and shrines are not restored; `set shrines/0 all` does the latter if you want it.
+
 `--max-rolls` gives every equipped item the best seed it can have. Without it,
 each item gets a random seed — a legitimate item, but an average one. Each item
 costs a full search, so a set of equipment takes a few minutes.
