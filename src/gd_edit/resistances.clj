@@ -131,8 +131,8 @@
    "defensiveLightning" "Lightning"
    "defensivePoison"    "Poison & Acid"
    "defensivePierce"    "Pierce"
-   "defensiveLife"      "Vitality"
    "defensiveBleeding"  "Bleeding"
+   "defensiveLife"      "Vitality"
    "defensiveAether"    "Aether"
    "defensiveChaos"     "Chaos"
    "defensivePhysical"  "Physical"))
@@ -398,15 +398,22 @@
       [r (effective-level bonuses (:skill-name s) (:level s))])))
 
 (defn- active-buffs
-  "Auras the player has switched on, paired with the buff record they apply."
+  "Auras the player has switched on, with the records that carry their values.
+
+  A toggle may hold its values on its own record, or name a separate buff record
+  through `buffSkillName`, or both. Master of Death carries `defensiveLife` on
+  its own record and names no buff at all, so reading only the buff misses it
+  entirely -- 28 Vitality on the one character here that has the skill."
   [character bonuses]
   (for [s (:skills character)
         :when (:skill-active s)
         :let [r (dbu/record-by-name (:skill-name s))
-              b (some-> (get r "buffSkillName") not-empty dbu/record-by-name)]
-        ;; a SkillBuff_Debuf is what the skill does to an enemy, not to the player
-        :when (and b (not (str/includes? (str (get b "Class")) "Debuf")))]
-    [b (effective-level bonuses (:skill-name s) (:level s))]))
+              b (some-> (get r "buffSkillName") not-empty dbu/record-by-name)
+              level (effective-level bonuses (:skill-name s) (:level s))]
+        record (remove nil?
+                       ;; a SkillBuff_Debuf is what the skill does to an enemy
+                       [r (when-not (str/includes? (str (get b "Class")) "Debuf") b)])]
+    [record level]))
 
 (defn contributions
   "Resistance values and cap modifiers, kept separate by where they came from.
