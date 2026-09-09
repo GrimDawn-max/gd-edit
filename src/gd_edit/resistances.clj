@@ -37,6 +37,13 @@
       not appear in `rolled-stats`. Missing them caps Bleeding at 80 when the
       character's real cap is 86.
 
+    - A relic's own completion bonus (:relic-bonus) is applied, and is rolled
+      from the item's seed rather than taken flat from the record -- one with a
+      base of 15 contributed 16. Forty of the game's relic completion bonuses
+      grant a resistance, worth up to 25, so missing this is a large error on
+      any character whose relic rolled one. Neither test character had one; it
+      was found by putting one on deliberately.
+
     - A blacksmith bonus on a relic is not applied at all. The same Poison
       Resistance bonus was put on a helm and then on a relic on the same
       character: the helm moved the figure by 4, the relic by nothing. That
@@ -183,9 +190,21 @@
   (let [items (equipped character)
         gear (reduce (fn [m it] (add-values m (item-stats/rolled-stats it) nil)) {} items)
         attached (reduce (fn [m it]
-                           (reduce (fn [m p]
-                                     (add-values m (some-> (not-empty (str p)) dbu/record-by-name) nil))
-                                   m [(:relic-name it) (:augment-name it)]))
+                           (as-> m $
+                             ;; the component and augment socketed into the item
+                             (reduce (fn [m p]
+                                       (add-values m (some-> (not-empty (str p)) dbu/record-by-name) nil))
+                                     $ [(:relic-name it) (:augment-name it)])
+                             ;; and a relic's own completion bonus, which is rolled
+                             ;; from the item's seed rather than being flat -- measured
+                             ;; at 16 from a base of 15 on the character this was
+                             ;; checked against, so the record value will not do
+                             (let [vals (:values (item-stats/completion-bonus it))]
+                               (reduce (fn [m f]
+                                         (if-let [v (some-> (get vals f) double)]
+                                           (update m f (fnil + 0.0) v)
+                                           m))
+                                       $ fields))))
                          {} items)
         devo (reduce (fn [m s] (add-values m (dbu/record-by-name (:skill-name s)) (:level s)))
                      {} (passive-devotions character))
