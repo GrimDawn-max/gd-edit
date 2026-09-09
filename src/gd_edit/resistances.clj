@@ -37,10 +37,17 @@
       not appear in `rolled-stats`. Missing them caps Bleeding at 80 when the
       character's real cap is 86.
 
-  Known limitation: on one test character a relic contributed 4 Chaos that the
-  game does not apply, and the cause has not been established. The figures here
-  are computed rather than read, so `resists` says so on screen -- a discrepancy
-  is worth reporting rather than trusting."
+  Known limitation: on one test character computed Chaos is 4 higher than the
+  game shows. It has been traced to a single source -- a crafted Chaos Resistance
+  blacksmith bonus on that character's relic, whose rolled value is exactly 4 --
+  but not explained. It is the only blacksmith bonus carrying a resistance across
+  both test characters, so there is no second case to test against; whether the
+  game declines to apply it, or something else is 4 low, cannot be settled from
+  these saves.
+
+  The figures here are computed rather than read, so `resists` says so on screen
+  and `resists all` prints the parts each total is made of -- a wrong answer is
+  worth reporting, and arrives with enough detail to find the term at fault."
   (:require [clojure.string :as str]
             [gd-edit.db-utils :as dbu]
             [gd-edit.item-stats :as item-stats]))
