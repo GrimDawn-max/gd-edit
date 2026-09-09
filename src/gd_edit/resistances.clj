@@ -9,6 +9,7 @@
       total  = the items, at their real rolled values
              + their components and augments
              + the set bonus for however many pieces of a set are worn
+             + skills an item or component grants, when those apply
              + devotion stars that are passive
              + auras the player has switched on
              - the difficulty penalty for that resistance
@@ -63,6 +64,23 @@
       characters this was developed against has a live set resistance bonus --
       every set they wear is a pet set -- so this was found by asking what the
       calculation does not read rather than by a figure disagreeing.
+
+    - A skill granted by an item or component is not in the character's skill
+      list at all -- only potion modifiers are -- so it is reached through the
+      granting record's `itemSkillName`. Seal of Might grants Presence of Might,
+      worth 12 Pierce, 12 Vitality and 12 Bleeding. Five of the six characters
+      wear two Seals each, and it applies once: the two grant the same skill, and
+      the record is capped at one level. Its classes divide the same way devotion
+      stars do -- `Skill_Passive` and the toggled ones apply, while
+      `Skill_BuffSelfDuration`, `Skill_PassiveOnLifeBuffSelf` and
+      `Skill_Shapeshift` do not, being temporary, conditional on low health, or a
+      transformation. Found because Mary read 78 where the game said 80, the only
+      figure of forty across four fresh characters that disagreed.
+
+    - A `SkillBuff_Debuf` reached through `buffSkillName` is aimed at enemies.
+      Curse of Frailty's buff record carries `defensiveBleeding` from -8 to -55,
+      and the path that collects a player's toggled auras would have subtracted
+      it. No character here triggers it, but the record and the path both exist.
 
     - A blacksmith bonus on a relic is not applied at all. The same Poison
       Resistance bonus was put on a helm and then on a relic on the same
@@ -203,6 +221,40 @@
                (when-let [record (dbu/record-by-name s)]
                  [record (count bases)])))))
 
+(def ^:private granted-skill-classes
+  "Classes of item-granted skill that are actually running.
+
+  The toggled ones reserve energy and stay on until switched off. Left out are
+  `Skill_BuffSelfDuration` (temporary), `Skill_PassiveOnLifeBuffSelf` (only below
+  a health threshold) and `Skill_Shapeshift` (a transformation), for the same
+  reason a temporary devotion buff is left out: they are not running."
+  #{"Skill_Passive" "Skill_BuffSelfToggled" "Skill_BuffAttackRadiusToggled"
+    "Skill_BuffRadiusToggled"})
+
+(defn- granted-skills
+  "Skills granted by the items, components and augments the character wears.
+
+  These are not in the character's skill list -- only potion modifiers are -- so
+  they are reached through the granting record's `itemSkillName`.
+
+  Keyed by skill record, so the same buff granted by two components counts once.
+  Five of the six characters this was checked against wear two Seals of Might,
+  and Presence of Might is one buff however many grant it.
+
+  Whether a toggled one is switched on is not written to the save, so it is taken
+  as on. That is what the character sheet shows for a character who has it
+  running, and it is the reading Mary's Bleeding agrees with."
+  [items]
+  (->> (for [it items
+             k [:basename :relic-name :augment-name]
+             :let [rec (some-> (get it k) not-empty str dbu/record-by-name)
+                   skill (some-> rec (get "itemSkillName") not-empty str)
+                   sr (some-> skill dbu/record-by-name)]
+             :when (and sr (contains? granted-skill-classes (str (get sr "Class"))))]
+         [skill sr])
+       (into {})
+       vals))
+
 (defn- passive-devotions
   [character]
   (->> (:skills character)
@@ -218,7 +270,8 @@
         :when (:skill-active s)
         :let [r (dbu/record-by-name (:skill-name s))
               b (some-> (get r "buffSkillName") not-empty dbu/record-by-name)]
-        :when b]
+        ;; a SkillBuff_Debuf is what the skill does to an enemy, not to the player
+        :when (and b (not (str/includes? (str (get b "Class")) "Debuf")))]
     [b (:level s)]))
 
 (defn contributions
@@ -252,6 +305,7 @@
                          {} items)
         sets (reduce (fn [m [record worn]] (add-values m record worn))
                      {} (set-bonuses items))
+        granted (reduce (fn [m r] (add-values m r nil)) {} (granted-skills items))
         devo (reduce (fn [m s] (add-values m (dbu/record-by-name (:skill-name s)) (:level s)))
                      {} (passive-devotions character))
         buffs (reduce (fn [m [r lvl]] (add-values m r lvl)) {} (active-buffs character))
@@ -263,10 +317,12 @@
                                    (add-caps m (some-> (not-empty (str p)) dbu/record-by-name) nil))
                                  m [(:relic-name it) (:augment-name it)]))
                        $ items)
+               (reduce (fn [m r] (add-caps m r nil)) $ (granted-skills items))
                (reduce (fn [m s] (add-caps m (dbu/record-by-name (:skill-name s)) (:level s)))
                        $ (passive-devotions character))
                (reduce (fn [m [r lvl]] (add-caps m r lvl)) $ (active-buffs character)))]
-    {:sources {:gear gear :attachments attached :sets sets :devotions devo :auras buffs}
+    {:sources {:gear gear :attachments attached :sets sets :item-skills granted
+               :devotions devo :auras buffs}
      :caps caps}))
 
 (defn compute

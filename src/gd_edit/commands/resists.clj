@@ -15,6 +15,7 @@
     :gear "items"
     :attachments "components/augments"
     :sets "set bonus"
+    :item-skills "item-granted skills"
     :devotions "devotions"
     :auras "active auras"
     (name k)))
@@ -22,7 +23,7 @@
 (defn- breakdown
   "Where a resistance came from, as \"items 56 + devotions 8\"."
   [parts]
-  (->> [:gear :attachments :sets :devotions :auras]
+  (->> [:gear :attachments :sets :item-skills :devotions :auras]
        (keep (fn [k] (when-let [v (get parts k)]
                        (format "%s %s" (source-label k) (u/maybe-int v)))))
        (str/join " + ")))
