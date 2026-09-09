@@ -8,6 +8,7 @@
       cap    = 80 + every maximum-resistance modifier the character carries
       total  = the items, at their real rolled values
              + their components and augments
+             + the set bonus for however many pieces of a set are worn
              + devotion stars that are passive
              + auras the player has switched on
              - the difficulty penalty for that resistance
@@ -53,6 +54,15 @@
       grant a resistance, worth up to 25, so missing this is a large error on
       any character whose relic rolled one. Neither test character had one; it
       was found by putting one on deliberately.
+
+    - A set bonus is not on any item. It lives on the set's own record, and its
+      value is an array indexed by how many pieces are worn, so a set granting
+      [0 25 25] gives nothing for one piece and 25 for two. Sixty-seven of the
+      game's 253 sets grant a resistance, worth up to 25 each. Nothing on an item
+      points at this: it is found only by looking the set up. Not one of the six
+      characters this was developed against has a live set resistance bonus --
+      every set they wear is a pet set -- so this was found by asking what the
+      calculation does not read rather than by a figure disagreeing.
 
     - A blacksmith bonus on a relic is not applied at all. The same Poison
       Resistance bonus was put on a helm and then on a relic on the same
@@ -173,6 +183,26 @@
        (filter #(not-empty (str (:basename %))))
        (map as-worn)))
 
+(defn- set-bonuses
+  "The set bonus for each set the character has pieces of.
+
+  A set's record holds one array per stat, indexed by pieces worn less one, so
+  a three-piece set granting [0 25 25] gives nothing until the second piece.
+  Pieces are counted by distinct base record: the set lists distinct members, so
+  wearing two copies of the same ring is one piece, not two.
+
+  Nothing on an item carries this -- the item names its set and the set holds the
+  bonus -- so it is reached the long way round, from `itemSetName`."
+  [items]
+  (->> items
+       (keep (fn [it] (when-let [s (some-> (:basename it) not-empty dbu/record-by-name
+                                           (get "itemSetName") not-empty)]
+                        [(str s) (str (:basename it))])))
+       (reduce (fn [m [s base]] (update m s (fnil conj #{}) base)) {})
+       (keep (fn [[s bases]]
+               (when-let [record (dbu/record-by-name s)]
+                 [record (count bases)])))))
+
 (defn- passive-devotions
   [character]
   (->> (:skills character)
@@ -220,6 +250,8 @@
                                            m))
                                        $ fields))))
                          {} items)
+        sets (reduce (fn [m [record worn]] (add-values m record worn))
+                     {} (set-bonuses items))
         devo (reduce (fn [m s] (add-values m (dbu/record-by-name (:skill-name s)) (:level s)))
                      {} (passive-devotions character))
         buffs (reduce (fn [m [r lvl]] (add-values m r lvl)) {} (active-buffs character))
@@ -234,7 +266,7 @@
                (reduce (fn [m s] (add-caps m (dbu/record-by-name (:skill-name s)) (:level s)))
                        $ (passive-devotions character))
                (reduce (fn [m [r lvl]] (add-caps m r lvl)) $ (active-buffs character)))]
-    {:sources {:gear gear :attachments attached :devotions devo :auras buffs}
+    {:sources {:gear gear :attachments attached :sets sets :devotions devo :auras buffs}
      :caps caps}))
 
 (defn compute
