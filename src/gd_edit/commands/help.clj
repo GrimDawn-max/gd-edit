@@ -189,6 +189,27 @@
                ""
                "Deletes the character at the specified path."])]
 
+   ["write character-csv" "Write the loaded character to a csv file"
+    (str/join "\n"
+              ["Syntax: write character-csv <path to write>"
+               ""
+               "Examples:"
+               "  write character-csv ~/Desktop/mary.csv"
+               "  write character-csv \"C:\\Users\\You\\Desktop\\mary.csv\""
+               ""
+               "Writes everything about the loaded character: its attributes, its"
+               "resistances, every equipped item with what it actually rolled and the"
+               "range each stat came from, the components and augments on them, the"
+               "skills taken and at what level, and the devotion constellations."
+               ""
+               "One row per fact, with a \"section\" column, so a spreadsheet can filter"
+               "it. Nothing is changed -- this only reads."
+               ""
+               "The path is required. \"write character-list\" defaults to the working"
+               "directory, which is the home folder when the app is started by clicking"
+               "it, so files land somewhere unexpected. Give a path and it says where it"
+               "wrote. Quote the path if it contains spaces."])]
+
    ["resists" "Show the character's resistances as the game shows them"
     (str/join "\n"
               ["Syntax: resists [all]"
