@@ -185,15 +185,15 @@
 
   `keep?` filters the values taken, which is how a skill modifier contributes
   only what it grants the player."
-  ([acc record level] (add-values acc record level (constantly true)))
-  ([acc record level keep?]
+  ([acc record level] (add-values acc record level fields (constantly true)))
+  ([acc record level flds keep?]
    (if-not record
      acc
      (reduce (fn [m f]
                (if-let [v (at-level (get record f) level)]
                  (if (keep? v) (update m f (fnil + 0.0) v) m)
                  m))
-             acc fields))))
+             acc flds))))
 
 (defn- add-caps
   "Fold one record's maximum-resistance modifiers into `acc`."
@@ -415,46 +415,65 @@
                        [r (when-not (str/includes? (str (get b "Class")) "Debuf") b)])]
     [record level]))
 
+(defn stat-sources
+  "Every place a character's stats come from, grouped by what kind of place it is.
+
+  A source is either a record to read at a level, or a map of values already
+  computed -- an item's rolled stats and a completion bonus are rolled from the
+  item's seed rather than being read off a record.
+
+  Resistances are one thing to fold over this; attributes and combat stats come
+  from the same places, so the graph is described once here rather than being
+  rebuilt per stat. Everything the `resistances` docstring records about which of
+  these count, and when, is encoded in the functions this calls."
+  [character]
+  (let [items (equipped character)
+        bonuses (level-bonuses items)]
+    {:gear (for [it items] {:values (item-stats/rolled-stats it)})
+     :attachments (concat
+                   (for [it items
+                         k [:relic-name :augment-name :ascended-name]
+                         :let [r (some-> (get it k) not-empty str dbu/record-by-name)]
+                         :when r]
+                     {:record r})
+                   (for [it items] {:values (:values (item-stats/completion-bonus it))}))
+     :sets (for [[record worn] (set-bonuses items)] {:record record :level worn})
+     :item-skills (for [r (granted-skills items)] {:record r})
+     :modifiers (for [[r level] (player-modifiers character bonuses)]
+                  {:record r :level level :keep pos?})
+     :devotions (for [s (passive-devotions character)]
+                  {:record (dbu/record-by-name (:skill-name s)) :level (:level s)})
+     :auras (for [[r level] (active-buffs character bonuses)] {:record r :level level})}))
+
+(defn collect
+  "Sum `flds` across one group of sources."
+  [sources flds]
+  (reduce (fn [m source]
+            (if-let [vals (:values source)]
+              (reduce (fn [m f]
+                        (if-let [v (get vals f)]
+                          (update m f (fnil + 0.0) (double v))
+                          m))
+                      m flds)
+              (add-values m (:record source) (:level source) flds
+                          (or (:keep source) (constantly true)))))
+          {} sources))
+
 (defn contributions
   "Resistance values and cap modifiers, kept separate by where they came from.
 
   Returns {:sources {source-key {field amount}} :caps {field amount}} so a
-  caller can show the breakdown, which is what makes a wrong answer diagnosable."
+  caller can show the breakdown, which is what makes a wrong answer diagnosable.
+
+  Maximum-resistance modifiers are gathered separately because they sit on base
+  records rather than in an item's rolled stats, and because a cap is not a
+  contribution -- it bounds the total rather than adding to it."
   [character]
   (let [items (equipped character)
         bonuses (level-bonuses items)
-        gear (reduce (fn [m it] (add-values m (item-stats/rolled-stats it) nil)) {} items)
-        attached (reduce (fn [m it]
-                           (as-> m $
-                             ;; the component and augment socketed into the item
-                             ;; the component, the augment, and any ascended affix.
-                             ;; Ascended affixes are flat: there is not one value in
-                             ;; that data that rolls, so the record's number is the
-                             ;; number -- one granting 3 Physical gave exactly 3.
-                             (reduce (fn [m p]
-                                       (add-values m (some-> (not-empty (str p)) dbu/record-by-name) nil))
-                                     $ [(:relic-name it) (:augment-name it) (:ascended-name it)])
-                             ;; and a relic's own completion bonus, which is rolled
-                             ;; from the item's seed rather than being flat -- measured
-                             ;; at 16 from a base of 15 on the character this was
-                             ;; checked against, so the record value will not do
-                             (let [vals (:values (item-stats/completion-bonus it))]
-                               (reduce (fn [m f]
-                                         (if-let [v (some-> (get vals f) double)]
-                                           (update m f (fnil + 0.0) v)
-                                           m))
-                                       $ fields))))
-                         {} items)
-        sets (reduce (fn [m [record worn]] (add-values m record worn))
-                     {} (set-bonuses items))
-        granted (reduce (fn [m r] (add-values m r nil)) {} (granted-skills items))
-        mods (reduce (fn [m [r lvl]] (add-values m r lvl pos?))
-                     {} (player-modifiers character bonuses))
-        devo (reduce (fn [m s] (add-values m (dbu/record-by-name (:skill-name s)) (:level s)))
-                     {} (passive-devotions character))
-        buffs (reduce (fn [m [r lvl]] (add-values m r lvl)) {} (active-buffs character bonuses))
+        by-source (into {} (for [[k srcs] (stat-sources character)]
+                             [k (collect srcs fields)]))
         caps (as-> {} $
-               ;; cap modifiers sit on base records, not in rolled-stats
                (reduce (fn [m it] (add-caps m (dbu/record-by-name (:basename it)) nil)) $ items)
                (reduce (fn [m it]
                          (reduce (fn [m p]
@@ -465,8 +484,7 @@
                (reduce (fn [m s] (add-caps m (dbu/record-by-name (:skill-name s)) (:level s)))
                        $ (passive-devotions character))
                (reduce (fn [m [r lvl]] (add-caps m r lvl)) $ (active-buffs character bonuses)))]
-    {:sources {:gear gear :attachments attached :sets sets :item-skills granted
-               :modifiers mods :devotions devo :auras buffs}
+    {:sources by-source
      :caps caps}))
 
 (defn compute
