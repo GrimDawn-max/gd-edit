@@ -23,6 +23,7 @@
              [set :as commands.set]
              [show :as commands.show]
              [update :as commands.update]
+             [resists :as commands.resists]
              [write :as commands.write]
              [batch :as commands.batch]
              [remove :as commands.remove]
@@ -121,6 +122,7 @@
    ["update"]  (fn [input] (commands.update/update-handler input))
    ["help"]    (fn [input] (commands.help/help-handler input))
    ["diag"]    (fn [input] (commands.diag/diag-handler input))
+   ["resists"] (fn [input] (commands.resists/resists-handler input))
    ["batch"]    (fn [input] (commands.batch/batch-handler input))
    ["batch" "item"]    (fn [input] (commands.item/batch-item-handler input))
    ["batch" "character"]    (fn [input] (commands.batch/batch-character-handler input))
