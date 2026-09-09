@@ -10,6 +10,7 @@
              + their components and augments
              + the set bonus for however many pieces of a set are worn
              + skills an item or component grants, when those apply
+             + skill modifiers that raise the player's own resistances
              + devotion stars that are passive
              + auras the player has switched on
              - the difficulty penalty for that resistance
@@ -69,13 +70,41 @@
       list at all -- only potion modifiers are -- so it is reached through the
       granting record's `itemSkillName`. Seal of Might grants Presence of Might,
       worth 12 Pierce, 12 Vitality and 12 Bleeding. Five of the six characters
-      wear two Seals each, and it applies once: the two grant the same skill, and
-      the record is capped at one level. Its classes divide the same way devotion
+      wear two Seals each, and both apply: ColdFluffy is 24 ahead of a single
+      count on all three, so the buff stacks per component rather than once per
+      skill, despite the record being capped at one level. Its classes divide the same way devotion
       stars do -- `Skill_Passive` and the toggled ones apply, while
       `Skill_BuffSelfDuration`, `Skill_PassiveOnLifeBuffSelf` and
       `Skill_Shapeshift` do not, being temporary, conditional on low health, or a
       transformation. Found because Mary read 78 where the game said 80, the only
       figure of forty across four fresh characters that disagreed.
+
+    - A skill's level is not the level in the save. Gear raises it three ways:
+      `augmentSkillLevel` against a named skill, `augmentMasteryLevel` against a
+      whole mastery, and `augmentAllLevel`, which lifts every skill. ColdFluffy's
+      Oak Skin is 5 in the save, +4 from gloves and +1 from Mogdrogen's Ardor, so
+      the game reads its level-10 row and grants 36 Pierce where the level-5 row
+      would have given 18. Set records carry these too, indexed by pieces worn.
+
+    - A `Skill_Modifier` is not always aimed at enemies. Word of Pain's is, and
+      that trap is real, but Oak Skin's is a modifier on the player's own aura
+      and grants 36 Pierce and 25 Aether. The two kinds separate cleanly by sign:
+      of the 255 modifiers carrying a resistance, 37 are wholly positive and 218
+      wholly negative, and none mixes the two. The positives are recognisable
+      player buffs -- Oak Skin, Aspect of the Guardian, Second Rite, Overload,
+      Steel Resolve, Consecration -- and the negatives are curses.
+
+      Sign alone is not enough: a modifier only grants anything while the skill
+      it modifies is running. Aspect of the Guardian modifies Blood of Dreeg, a
+      buff that is cast and expires, and counting it put 115 Poison on a
+      character the game gives 1. Nothing in the database links a modifier to the
+      skill it modifies, so the link is made by name: the modifier's icon is
+      named after that skill. Oak Skin sits in `naturesblessing3` but its icon is
+      `skillicon_natureblessing2up`, and the aura it modifies is
+      `natureblessing1` -- the record names differ by a letter and the icon is
+      what bridges them. A modifier counts when a skill of the same family is
+      switched on. Modifiers granted by items are left out for the same reason,
+      since the skill they modify cannot be identified at all.
 
     - A `SkillBuff_Debuf` reached through `buffSkillName` is aimed at enemies.
       Curse of Frailty's buff record carries `defensiveBleeding` from -8 to -55,
@@ -152,15 +181,19 @@
                [f (if (sequential? a) (double (nth a i 0.0)) 0.0)]))))
 
 (defn- add-values
-  "Fold one record's resistance values into `acc` at `level`."
-  [acc record level]
-  (if-not record
-    acc
-    (reduce (fn [m f]
-              (if-let [v (at-level (get record f) level)]
-                (update m f (fnil + 0.0) v)
-                m))
-            acc fields)))
+  "Fold one record's resistance values into `acc` at `level`.
+
+  `keep?` filters the values taken, which is how a skill modifier contributes
+  only what it grants the player."
+  ([acc record level] (add-values acc record level (constantly true)))
+  ([acc record level keep?]
+   (if-not record
+     acc
+     (reduce (fn [m f]
+               (if-let [v (at-level (get record f) level)]
+                 (if (keep? v) (update m f (fnil + 0.0) v) m)
+                 m))
+             acc fields))))
 
 (defn- add-caps
   "Fold one record's maximum-resistance modifiers into `acc`."
@@ -221,6 +254,65 @@
                (when-let [record (dbu/record-by-name s)]
                  [record (count bases)])))))
 
+(defn- pick-level
+  "A level bonus, flat or -- on a set record -- indexed by pieces worn."
+  [v worn]
+  (cond
+    (number? v) (long v)
+    (sequential? v) (long (nth v (max 0 (if worn
+                                          (min (dec (count v)) (dec (long worn)))
+                                          (dec (count v))))
+                              0))
+    :else 0))
+
+(defn- bonus-records
+  "Every record the character wears that can carry a level bonus, paired with the
+  piece count a set record needs to index itself."
+  [items]
+  (concat (for [it items
+                k [:basename :relic-name :augment-name :ascended-name :prefix-name
+                   :suffix-name :modifier-name :relic-bonus]
+                :let [r (some-> (get it k) not-empty str dbu/record-by-name)]
+                :when r]
+            [r nil])
+          (for [[record worn] (set-bonuses items)] [record worn])))
+
+(defn- level-bonuses
+  "How many levels the character's gear adds: to every skill at once, to named
+  skills, and to whole masteries."
+  [items]
+  (reduce
+   (fn [acc [r worn]]
+     (as-> acc $
+       (update $ :all + (pick-level (get r "augmentAllLevel") worn))
+       (reduce (fn [m i]
+                 (if-let [n (some-> (get r (str "augmentSkillName" i)) not-empty str)]
+                   (update-in m [:skills n] (fnil + 0)
+                              (pick-level (get r (str "augmentSkillLevel" i)) worn))
+                   m))
+               $ (range 1 6))
+       (reduce (fn [m i]
+                 (if-let [n (some-> (get r (str "augmentMasteryName" i)) not-empty str)]
+                   (update-in m [:masteries n] (fnil + 0)
+                              (pick-level (get r (str "augmentMasteryLevel" i)) worn))
+                   m))
+               $ (range 1 4))))
+   {:all 0 :skills {} :masteries {}}
+   (bonus-records items)))
+
+(defn- effective-level
+  "The level the game reads a skill's values at: what was spent on it, plus what
+  gear adds. A mastery bonus is matched by the playerclass the skill belongs to."
+  [bonuses skill-name level]
+  (let [mastery (re-find #"playerclass\d+" (str skill-name))]
+    (+ (long (or level 0))
+       (long (:all bonuses))
+       (long (get-in bonuses [:skills (str skill-name)] 0))
+       (long (if mastery
+               (reduce + 0 (for [[k v] (:masteries bonuses)
+                                 :when (str/includes? (str k) mastery)] v))
+               0)))))
+
 (def ^:private granted-skill-classes
   "Classes of item-granted skill that are actually running.
 
@@ -237,23 +329,21 @@
   These are not in the character's skill list -- only potion modifiers are -- so
   they are reached through the granting record's `itemSkillName`.
 
-  Keyed by skill record, so the same buff granted by two components counts once.
-  Five of the six characters this was checked against wear two Seals of Might,
-  and Presence of Might is one buff however many grant it.
+  Counted once per granting item rather than once per skill. Five of the six
+  characters wear two Seals of Might, and ColdFluffy's Pierce, Vitality and
+  Bleeding are each 12 higher than one count allows, so both apply.
 
   Whether a toggled one is switched on is not written to the save, so it is taken
   as on. That is what the character sheet shows for a character who has it
   running, and it is the reading Mary's Bleeding agrees with."
   [items]
-  (->> (for [it items
-             k [:basename :relic-name :augment-name]
-             :let [rec (some-> (get it k) not-empty str dbu/record-by-name)
-                   skill (some-> rec (get "itemSkillName") not-empty str)
-                   sr (some-> skill dbu/record-by-name)]
-             :when (and sr (contains? granted-skill-classes (str (get sr "Class"))))]
-         [skill sr])
-       (into {})
-       vals))
+  (for [it items
+        k [:basename :relic-name :augment-name]
+        :let [rec (some-> (get it k) not-empty str dbu/record-by-name)
+              skill (some-> rec (get "itemSkillName") not-empty str)
+              sr (some-> skill dbu/record-by-name)]
+        :when (and sr (contains? granted-skill-classes (str (get sr "Class"))))]
+    sr))
 
 (defn- passive-devotions
   [character]
@@ -263,16 +353,60 @@
                      (pos? (long (or (:level %) 0)))))
        (filter #(= "Skill_Passive" (str (get (dbu/record-by-name (:skill-name %)) "Class"))))))
 
+(defn- family
+  "The family of skills a record belongs to, by name.
+
+  A modifier's icon is named after the skill it modifies, which is the only link
+  between them: Oak Skin is `naturesblessing3` with icon
+  `skillicon_natureblessing2up`, and modifies `natureblessing1`."
+  [skill-name record]
+  (->> [(some-> (get record "skillUpBitmapName") str)
+        (str skill-name)]
+       (keep (fn [s]
+               (some-> s str/lower-case
+                       (str/replace #".*/" "")
+                       (str/replace #"^skillicon_" "")
+                       (str/replace #"(up|down)\.tex$" "")
+                       (str/replace #"\.dbr$" "")
+                       (str/replace #"\d+$" "")
+                       not-empty)))
+       set))
+
+(defn- running-families
+  "The families of every skill the character has switched on."
+  [character]
+  (->> (:skills character)
+       (filter :skill-active)
+       (mapcat (fn [s] (family (:skill-name s) (dbu/record-by-name (:skill-name s)))))
+       set))
+
+(defn- player-modifiers
+  "Skill modifiers the character has points in that raise their own resistances.
+
+  A modifier's values are read at the skill's effective level, and only the
+  positive ones are taken: a modifier that lowers a resistance is lowering an
+  enemy's. It applies only while the skill it modifies is switched on."
+  [character bonuses]
+  (let [running (running-families character)]
+    (for [s (:skills character)
+          :when (and (:enabled s)
+                     (pos? (long (or (:level s) 0)))
+                     (zero? (long (or (:devotion-level s) 0))))
+          :let [r (dbu/record-by-name (:skill-name s))]
+          :when (and r (= "Skill_Modifier" (str (get r "Class")))
+                     (some running (family (:skill-name s) r)))]
+      [r (effective-level bonuses (:skill-name s) (:level s))])))
+
 (defn- active-buffs
   "Auras the player has switched on, paired with the buff record they apply."
-  [character]
+  [character bonuses]
   (for [s (:skills character)
         :when (:skill-active s)
         :let [r (dbu/record-by-name (:skill-name s))
               b (some-> (get r "buffSkillName") not-empty dbu/record-by-name)]
         ;; a SkillBuff_Debuf is what the skill does to an enemy, not to the player
         :when (and b (not (str/includes? (str (get b "Class")) "Debuf")))]
-    [b (:level s)]))
+    [b (effective-level bonuses (:skill-name s) (:level s))]))
 
 (defn contributions
   "Resistance values and cap modifiers, kept separate by where they came from.
@@ -281,6 +415,7 @@
   caller can show the breakdown, which is what makes a wrong answer diagnosable."
   [character]
   (let [items (equipped character)
+        bonuses (level-bonuses items)
         gear (reduce (fn [m it] (add-values m (item-stats/rolled-stats it) nil)) {} items)
         attached (reduce (fn [m it]
                            (as-> m $
@@ -306,9 +441,11 @@
         sets (reduce (fn [m [record worn]] (add-values m record worn))
                      {} (set-bonuses items))
         granted (reduce (fn [m r] (add-values m r nil)) {} (granted-skills items))
+        mods (reduce (fn [m [r lvl]] (add-values m r lvl pos?))
+                     {} (player-modifiers character bonuses))
         devo (reduce (fn [m s] (add-values m (dbu/record-by-name (:skill-name s)) (:level s)))
                      {} (passive-devotions character))
-        buffs (reduce (fn [m [r lvl]] (add-values m r lvl)) {} (active-buffs character))
+        buffs (reduce (fn [m [r lvl]] (add-values m r lvl)) {} (active-buffs character bonuses))
         caps (as-> {} $
                ;; cap modifiers sit on base records, not in rolled-stats
                (reduce (fn [m it] (add-caps m (dbu/record-by-name (:basename it)) nil)) $ items)
@@ -320,9 +457,9 @@
                (reduce (fn [m r] (add-caps m r nil)) $ (granted-skills items))
                (reduce (fn [m s] (add-caps m (dbu/record-by-name (:skill-name s)) (:level s)))
                        $ (passive-devotions character))
-               (reduce (fn [m [r lvl]] (add-caps m r lvl)) $ (active-buffs character)))]
+               (reduce (fn [m [r lvl]] (add-caps m r lvl)) $ (active-buffs character bonuses)))]
     {:sources {:gear gear :attachments attached :sets sets :item-skills granted
-               :devotions devo :auras buffs}
+               :modifiers mods :devotions devo :auras buffs}
      :caps caps}))
 
 (defn compute
