@@ -8,6 +8,7 @@
             [gd-edit.globals :as globals]
             [gd-edit.skill :as skill]
             [gd-edit.commands.item :as item]
+            [gd-edit.commands.set :as commands.set]
             [gd-edit.commands.level :as level]
             [gd-edit.db-utils :as dbu]
             [gd-edit.max-rolls :as max-rolls]
@@ -807,6 +808,27 @@
           (println (format "Done in %.0f seconds." (/ (- (System/nanoTime) t0) 1e9)))
           result)))))
 
+(defn unlock-rift-gates
+  "Give the character every rift gate, on all three difficulties.
+
+  A character built here starts wherever the template last stood, and can reach
+  only the towns whose gates the template happened to hold -- which does not
+  include the Fangs of Asterkarn ones. Without them the expansion's map is
+  visible but unreachable, and there is no way to travel anywhere to change it.
+
+  Unlocking them leaves the choice of where to be with the player: travel to a
+  town once and the game makes it the respawn point from then on."
+  [character]
+  (let [gates (dbu/get-gates)]
+    (if (empty? gates)
+      character
+      (do
+        (println)
+        (println (format "Setting all %d rift gates..." (count gates)))
+        (reduce (fn [c d] (commands.set/add-all-uids c [:teleporter-points d] gates))
+                character
+                (range (count (:teleporter-points character))))))))
+
 (defn create-character-
   "Take the json file, recreate the character using a template, then move the character to
   the local save directory
@@ -824,6 +846,7 @@
         gt-data (:data gt-character-root)
         new-character (cond-> (gt-apply-character gt-data template-character)
                         (needs-foa-layout? gt-data) upgrade-to-foa
+                        true unlock-rift-gates
                         max-rolls? maximise-rolls)
 
         ;; Save it back into the template files directory

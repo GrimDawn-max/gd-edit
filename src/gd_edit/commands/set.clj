@@ -104,9 +104,14 @@
       {:status :no-definite-match :rankings rankings :character character})))
 
 (defn add-all-uids
+  "Add every UID in `uid-coll` that `character` does not already hold at `path`.
+
+  Reads the existing entries from `character` rather than from the loaded one.
+  Those are the same thing for the `set` command, but not for a character being
+  built by make-char, which is not loaded anywhere yet."
   [character path uid-coll]
   (let [item-by-id (u/hashmap-with-keys #(seq (:uid %)) uid-coll)
-        present-items (map #(seq %) (get-in @globals/character path))
+        present-items (map #(seq %) (get-in character path))
         missing-items (clojure.set/difference (ordered-set/into-ordered-set (keys item-by-id))
                                               (ordered-set/into-ordered-set present-items))
         missing-uids (->> (map item-by-id missing-items)
