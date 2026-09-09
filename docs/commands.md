@@ -461,9 +461,13 @@ find-seed Mythical Amatok's Step
 find-seed Amatok's                 lists everything matching, to choose from
 ```
 
-It builds the item **without a prefix or suffix**. That is worth knowing if you
-are trying to reproduce an affixed item from a build: `find-seed` will give you
-the unaffixed version of it, not a maximised version of the one you had.
+It offers a **prefix** and a **suffix** while building, alongside the blacksmith
+and completion bonuses, and searches with them in place.
+
+Choose them here rather than adding them afterwards. An affix consumes draws of
+its own and shifts every stat after it, so a seed chosen for the unaffixed item
+no longer suits it once an affix is set on it — on one pendant, every stat at
+maximum became one of six that way.
 
 It offers two searches:
 
@@ -500,8 +504,8 @@ seed — on a stream of its own, uncorrelated with the item's ordinary stats.
 That last part decides which tool to use:
 
 [`make-char --max-rolls`](#make-char)
-:   Scores the pet bonus on the **base item** alongside its other stats. A pet
-    bonus carried by the item's *prefix* is not scored — see below.
+:   Scores every pet bonus the item carries — its own and any its prefix brings —
+    alongside all its other stats. Nothing to do.
 
 [`find-seed`](#find-seed), **option 1** — *get each stat as high as it will go*
 :   Also scores it. This is the one you want for a pet item.
@@ -512,24 +516,16 @@ That last part decides which tool to use:
     gathered — a pool of up to a thousand — rather than being an objective
     across the whole seed space.
 
-!!! warning "Prefixes are outside the search"
+!!! note "Affixes are searched too"
 
     A pet bonus can come from the item itself (450 records) or from its prefix
-    (326 records). Only the item's own is optimised: the search is fitted to the
-    base record and never sees the affixes, so a prefix's pet bonus — and the
-    prefix's ordinary stats — land wherever the chosen seed puts them.
+    (326 records). Both are optimised, along with the prefix's and suffix's
+    ordinary stats.
 
-    **The item's own pet bonus is optimised either way.** Carrying a prefix does
-    not stop that — only a pet bonus belonging to the prefix goes unscored.
-
-    **And it cannot arise on an Epic or Legendary**, because those do not roll
-    affixes at all. Only Common items and monster infrequents carry a prefix, so
-    a build equipping Epics and Legendaries is fully optimised. It is worth
-    knowing about for a build leaning on monster infrequents.
-
-    It also cannot arise in [`find-seed`](#find-seed), which builds items with no
-    prefix or suffix. Only [`make-char`](#make-char) is affected, whose items
-    come from GrimTools with whatever affixes they had.
+    This was not always so: until 0.2.501 the search was fitted to the base item
+    with its affixes ignored, so on an affixed item it optimised only part of
+    what you were holding. If you built a character with an earlier version,
+    rerunning `make-char --max-rolls` will improve its affixed items.
 
 !!! note "Why it has to be scored deliberately"
 
