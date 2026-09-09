@@ -37,13 +37,10 @@
       not appear in `rolled-stats`. Missing them caps Bleeding at 80 when the
       character's real cap is 86.
 
-  Known limitation: on one test character computed Chaos is 4 higher than the
-  game shows. It has been traced to a single source -- a crafted Chaos Resistance
-  blacksmith bonus on that character's relic, whose rolled value is exactly 4 --
-  but not explained. It is the only blacksmith bonus carrying a resistance across
-  both test characters, so there is no second case to test against; whether the
-  game declines to apply it, or something else is 4 low, cannot be settled from
-  these saves.
+    - A blacksmith bonus on a relic is not applied at all. The same Poison
+      Resistance bonus was put on a helm and then on a relic on the same
+      character: the helm moved the figure by 4, the relic by nothing. That
+      accounts for a crafted Chaos Resistance the game had been ignoring.
 
   The figures here are computed rather than read, so `resists` says so on screen
   and `resists all` prints the parts each total is made of -- a wrong answer is
@@ -133,6 +130,21 @@
                   every-one (update f (fnil + 0.0) every-one))))
             acc (keys resistances))))
 
+(defn- relic?
+  [item]
+  (= "ItemArtifact" (str (get (dbu/record-by-name (:basename item)) "Class"))))
+
+(defn- as-worn
+  "An item as the game actually treats it.
+
+  A blacksmith bonus on a relic is not applied. Verified directly: the same
+  Poison Resistance bonus moved a character's resistance by 4 on a helm and by
+  nothing at all on that character's relic, and it accounts exactly for a relic's
+  crafted Chaos Resistance that the game had been ignoring."
+  [item]
+  (cond-> item
+    (relic? item) (assoc :modifier-name "")))
+
 (defn- equipped
   "Every item the character is actually wearing.
 
@@ -141,7 +153,8 @@
   [character]
   (->> (concat (:equipment character)
                (->> (:weapon-sets character) (remove :unused) (mapcat :items)))
-       (filter #(not-empty (str (:basename %))))))
+       (filter #(not-empty (str (:basename %))))
+       (map as-worn)))
 
 (defn- passive-devotions
   [character]
