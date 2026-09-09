@@ -37,6 +37,16 @@
       not appear in `rolled-stats`. Missing them caps Bleeding at 80 when the
       character's real cap is 86.
 
+    - An ascended affix (:ascended-name) grants its resistance flat. Nineteen of
+      them carry one, worth 20 to 30. Verified by putting one granting 3 Physical
+      on a character with none: the game read 3, which also confirms Physical
+      takes no difficulty penalty, since 3 less any penalty would have floored to
+      nothing.
+
+    - An illusion (:transmute-name) grants nothing. It names an ordinary item
+      whose appearance is borrowed, and 405 of those carry resistances -- reading
+      them would silently add a whole stat line for a cosmetic change.
+
     - A relic's own completion bonus (:relic-bonus) is applied, and is rolled
       from the item's seed rather than taken flat from the record -- one with a
       base of 15 contributed 16. Forty of the game's relic completion bonuses
@@ -192,9 +202,13 @@
         attached (reduce (fn [m it]
                            (as-> m $
                              ;; the component and augment socketed into the item
+                             ;; the component, the augment, and any ascended affix.
+                             ;; Ascended affixes are flat: there is not one value in
+                             ;; that data that rolls, so the record's number is the
+                             ;; number -- one granting 3 Physical gave exactly 3.
                              (reduce (fn [m p]
                                        (add-values m (some-> (not-empty (str p)) dbu/record-by-name) nil))
-                                     $ [(:relic-name it) (:augment-name it)])
+                                     $ [(:relic-name it) (:augment-name it) (:ascended-name it)])
                              ;; and a relic's own completion bonus, which is rolled
                              ;; from the item's seed rather than being flat -- measured
                              ;; at 16 from a base of 15 on the character this was
