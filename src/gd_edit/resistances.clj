@@ -441,6 +441,13 @@
      :item-skills (for [r (granted-skills items)] {:record r})
      :modifiers (for [[r level] (player-modifiers character bonuses)]
                   {:record r :level level :keep pos?})
+     ;; a mastery bar grants attributes for every point put into it: 325 Physique,
+     ;; 300 Cunning and 375 Spirit across ColdFluffy's two bars at 50 each
+     :masteries (for [s (:skills character)
+                      :let [r (dbu/record-by-name (:skill-name s))]
+                      :when (and r (= "Skill_Mastery" (str (get r "Class")))
+                                 (pos? (long (or (:level s) 0))))]
+                  {:record r :level (:level s)})
      :devotions (for [s (passive-devotions character)]
                   {:record (dbu/record-by-name (:skill-name s)) :level (:level s)})
      :auras (for [[r level] (active-buffs character bonuses)] {:record r :level level})}))
