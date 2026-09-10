@@ -77,6 +77,10 @@ No stat or game data files are taken from it -- only the rolling algorithm.
 That project asks for no support requests or bug reports, and neither does this
 one: see the note on support in README.txt.
 
+The sources are not committed to this repository. scripts/fetch-item-stats.sh
+retrieves them at a pinned commit, recorded at the top of that script, and the
+build compiles them in.
+
 
 JAVA RUNTIME
 ------------
