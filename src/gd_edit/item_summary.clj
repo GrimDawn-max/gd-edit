@@ -141,7 +141,13 @@
                                             :name
                                             :level)))
        (s/transform [s/ALL :name] (fn [record-path]
-                                    (dbu/skill-name-from-record (dbu/record-by-name record-path))))))
+                                    (dbu/skill-name-from-record (dbu/record-by-name record-path))))
+       ;; Some records carry an augmentSkillLevel with no augmentSkillName
+       ;; beside it -- the ascended affix ad314b, which is really just
+       ;; +3% Physical Resistance, holds two of them. With no skill named
+       ;; there is nothing to augment, and formatting it anyway printed
+       ;; "+3 to null".
+       (remove (comp str/blank? str :name))))
 
 (defn augment-masteries
   "Given a record, extract the skills it augments"
@@ -816,6 +822,18 @@
   [s]
   (str "  " s))
 
+(defn indent-all
+  "Indent every line of a summary, however deeply it is nested.
+
+  effect-summary returns a mixed sequence: most elements are strings, but a
+  record split into sub-records contributes whole sequences, and those are only
+  flattened by whoever prints it. Mapping `indent` over that indents the strings
+  and leaves everything inside a nested sequence flush, so an indented block
+  came out with its first line or two aligned and the rest hanging at the
+  margin. Flattening first indents the lines rather than the elements."
+  [xs]
+  (map indent (flatten xs)))
+
 (defn wrap-if-single
   [v]
   (cond
@@ -990,7 +1008,7 @@
                 ;; record belongs to a granted skill rather than the item, and
                 ;; *pet-bonus* is nil there, so it prints its own values.
                 (let [pb (when (empty? recursion-blocks) *pet-bonus*)]
-                  (map indent
+                  (indent-all
                        (binding [*stat-ranges* (:ranges pb)]
                          (doall
                           (effect-summary (merge pet-bonus-record (:values pb))
@@ -1011,7 +1029,7 @@
 
                   ;; Add the actual effect summary
                   [""]
-                  (map indent
+                  (indent-all
                        (effect-summary item-skill (conj recursion-blocks :item-skill)))))))
 
            (when-not (recursion-blocks :buff-skill)
@@ -1101,7 +1119,7 @@
       ;; item's rolled ranges -- none of these roll from the item's seed.
       (when-let [component (dbu/record-by-name (:relic-name item))]
         ["" (yellow (or (dbu/item-base-record-get-name component) "Component"))
-         (map indent (effect-summary component #{:component}))])
+         (indent-all (effect-summary component #{:component}))])
 
       (when-let [bonus (dbu/record-by-name (:relic-bonus item))]
         (let [cb (item-stats/completion-bonus item)]
@@ -1112,20 +1130,20 @@
            ;; recursion-blocks keeps those ranges for the bonus's own fields;
            ;; anything nested inside it recurses with a non-empty one and loses
            ;; them, which is what we want.
-           (map indent
+           (indent-all
                 (binding [*stat-ranges* (:ranges cb)]
                   (doall (effect-summary (merge bonus (:values cb)) #{}))))]))
 
       (when-let [augment (dbu/record-by-name (:augment-name item))]
         ["" (yellow (or (dbu/item-base-record-get-name augment) "Augment"))
-         (map indent (effect-summary augment #{:augment}))])
+         (indent-all (effect-summary augment #{:augment}))])
 
       ;; The Fangs of Asterkarn ascended affix, applied at the Kurnhold altar.
       ;; Every record in the ascended pools has zero jitter, so these do not roll
       ;; and there are no ranges to show -- one fixed affix, chosen at ascension.
       (when-let [ascended (dbu/record-by-name (:ascended-name item))]
         ["" (yellow "Ascended Bonus")
-         (map indent (effect-summary ascended #{:ascended}))])
+         (indent-all (effect-summary ascended #{:ascended}))])
 
       ;; Set membership. The bonuses are fixed -- they do not roll and are not
       ;; stored on the item -- but they are the one stat source nothing else here
@@ -1143,7 +1161,7 @@
            (for [[n fields] tiers]
              [""
               (indent (format "%d pieces:" n))
-              (map (comp indent indent) (effect-summary fields #{:set}))])]))
+              (map indent (indent-all (effect-summary fields #{:set})))])]))
 
       ;; Requirements section
       ""

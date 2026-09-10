@@ -300,9 +300,12 @@
    {:all 0 :skills {} :masteries {}}
    (bonus-records items)))
 
-(defn- effective-level
-  "The level the game reads a skill's values at: what was spent on it, plus what
-  gear adds. A mastery bonus is matched by the playerclass the skill belongs to."
+(defn- raw-level
+  "Points spent plus every level gear adds, before the skill's own ceiling.
+
+  Kept apart from `effective-level` so a caller can tell a skill that reaches
+  its ceiling from one whose bonuses run past it and are cut -- the game shows
+  the second in red and the first in blue."
   [bonuses skill-name level]
   (let [mastery (re-find #"playerclass\d+" (str skill-name))]
     (+ (long (or level 0))
@@ -312,6 +315,24 @@
                (reduce + 0 (for [[k v] (:masteries bonuses)
                                  :when (str/includes? (str k) mastery)] v))
                0)))))
+
+(defn- effective-level
+  "The level the game reads a skill's values at: what was spent on it, plus what
+  gear adds, up to the skill's own ceiling.
+
+  A mastery bonus is matched by the playerclass the skill belongs to.
+
+  `skillUltimateLevel` is how far gear may push a skill past its cap, and it is
+  a hard stop rather than a display convention: MaxFluffy's Summon Hellhound
+  totals 27 from one point spent and 26 in bonuses, and the game shows 26 -- its
+  ultimate level -- with the figure in red to mark it pinned there. Skills with
+  no ultimate level carry 0 and are not clamped."
+  [bonuses skill-name level]
+  (let [raw (raw-level bonuses skill-name level)
+        ceiling (long (or (some-> (dbu/record-by-name skill-name)
+                                  (get "skillUltimateLevel"))
+                          0))]
+    (if (pos? ceiling) (min raw ceiling) raw)))
 
 (def ^:private granted-skill-classes
   "Classes of item-granted skill that are actually running.

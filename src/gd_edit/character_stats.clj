@@ -171,7 +171,11 @@
                                                   (bonus-protection (nth equipment i))
                                                   shared)
                                                (g "defensiveProtectionModifier"))]))]
-    {:physique (shown physique)
+    {;; the untruncated attributes, for anything derived from them. The game's own
+     ;; tooltips do this: Spirit shows 797 but contributes 1122 health, which only
+     ;; comes out right from 797.99994 rather than from the 797 it prints.
+     :exact {:physique physique :cunning cunning :spirit spirit}
+     :physique (shown physique)
      :cunning (shown cunning)
      :spirit (shown spirit)
      :health (shown health)
