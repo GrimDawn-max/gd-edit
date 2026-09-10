@@ -436,6 +436,65 @@ the one you meant.
 
 Export every character to a CSV file.
 
+### write character-csv
+
+Export the **loaded** character to a CSV file, for a spreadsheet.
+
+```
+write character-csv ~/Desktop/mary.csv
+write character-csv "C:\Users\You\Desktop\mary.csv"
+```
+
+One row per fact, with a `section` column, so a spreadsheet can filter it. It
+covers the attributes, the resistances, every equipped item with what it actually
+rolled and the range each stat came from, the components and augments on them, the
+skills taken and at what level, and the devotion constellations.
+
+The path is required, so the file goes where you meant it to rather than into
+whatever folder the app happened to start in. Quote it if it contains spaces.
+
+### write character-json
+
+The same character, shaped for other programs rather than for a spreadsheet.
+
+```
+write character-json ~/Desktop/mary.json
+write character-json "C:\Users\You\Desktop\mary.json"
+```
+
+It carries the computed sheet — attributes, health, energy, offensive and defensive
+ability, armour and resistances — and then every equipped item with its real rolled
+values and the range each came from.
+
+It is **self-contained**. Everything in it is already resolved, so whatever reads it
+needs no copy of the game files. That is the point: the game database is 173MB of
+Crate's data that a website cannot ship and you cannot reasonably upload, while this
+file is a few tens of kilobytes of your own save with the numbers already worked out.
+
+---
+
+## Resistances
+
+### resists
+
+Show the loaded character's resistances as the game shows them.
+
+```
+resists                    the ten resistances
+resists all                and where each figure comes from
+```
+
+Resistances are not stored in a save — the game works them out when it loads a
+character. So these are computed: from your gear at its real rolled values, the
+components, augments and set bonuses on it, the skills your items grant, the
+devotion stars that are passive, the auras you have switched on, and the difficulty
+penalty. Green is the real figure; yellow means it is capped, and `resists all`
+shows what it would be without the cap.
+
+Because they are computed rather than read, a figure that disagrees with the
+character sheet is worth knowing about. `resists all` prints the parts each total is
+made of, which is usually enough to see which one is at fault.
+
 ---
 
 ## Illusions

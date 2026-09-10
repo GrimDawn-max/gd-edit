@@ -107,6 +107,7 @@
    ["ws"] (fn [input] (commands.write/write-stash-handler input))
    ["write" "character-list"] (fn [input] (commands.write/write-character-list input))
    ["write" "character-csv"] (fn [input] (commands.export/export-csv-handler input))
+   ["write" "character-json"] (fn [input] (commands.export/export-json-handler input))
    ["class"] (fn [input] (commands.class/class-handler input))
    ["class" "list"] (fn [input] (commands.class/class-list-handler input))
    ["class" "add"]  (fn [input] (commands.class/class-add-handler input))

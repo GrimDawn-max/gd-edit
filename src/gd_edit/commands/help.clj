@@ -189,6 +189,28 @@
                ""
                "Deletes the character at the specified path."])]
 
+   ["write character-json" "Write the loaded character to a json file"
+    (str/join "\n"
+              ["Syntax: write character-json <path to write>"
+               ""
+               "Examples:"
+               "  write character-json ~/Desktop/mary.json"
+               "  write character-json \"C:\\Users\\You\\Desktop\\mary.json\""
+               ""
+               "The same character as write character-csv, shaped for other programs"
+               "rather than for a spreadsheet: the computed sheet (attributes, health,"
+               "energy, offensive and defensive ability, armour and resistances), then"
+               "every equipped item with what it actually rolled and the range each"
+               "stat came from."
+               ""
+               "It is self-contained. Everything in it is already resolved, so whatever"
+               "reads it needs no copy of the game files -- which is what makes it"
+               "useful to a website or another tool that has your save but not your"
+               "Grim Dawn install."
+               ""
+               "The path is required, so the file goes where you meant it to. Quote it"
+               "if it contains spaces."])]
+
    ["write character-csv" "Write the loaded character to a csv file"
     (str/join "\n"
               ["Syntax: write character-csv <path to write>"
