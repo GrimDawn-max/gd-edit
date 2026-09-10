@@ -17,7 +17,7 @@
   build compiles them in. That engine is optional: it is resolved reflectively at
   runtime and every entry point here returns nil when it is absent, so gd-edit
   runs unchanged without it and simply shows the unrolled values as it always
-  did. See THIRD-PARTY.txt for the terms it is published under."
+  did. See packaging/common/THIRD-PARTY.txt for the terms it is published under."
   (:require [gd-edit.db-utils :as dbu]))
 
 (def ^:private pet-calculator
