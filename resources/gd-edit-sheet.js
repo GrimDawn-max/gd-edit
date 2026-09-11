@@ -157,7 +157,7 @@
   // A constellation the way the game presents it: what every star adds up to,
   // what it costs in affinity, and what completing it pays back.
   function tipConst(k) {
-    var out = ['<h5 class="skn">' + e(k.label || k.name) + "</h5>"];
+    var out = ['<h5 class="skn">' + e(k.name) + "</h5>"];
     if (k.desc) out.push('<div class="rdesc">' + e(k.desc) + "</div>");
     out.push('<div class="tm">' + k.starsTaken + " of " + k.starsTotal + " stars" +
              (k.complete ? " · complete" : "") + "</div>");
@@ -433,9 +433,12 @@
         var b = s.bound || {};
         var tex = String(b.tex || s.tex || "").toLowerCase().replace(/^ui\//, "");
         var gi = (treeico[tex] || {}).uri || "";
+        // a proc does nothing until it is bound to a skill, so an empty
+        // binding is worth saying rather than leaving the icon on its own
         return "<em>" + (gi ? '<img src="' + gi + '" alt="">' : "") +
                "<u>" + e(s.name) + "</u>" +
-               (b.name ? "<s>" + e(b.name) + "</s>" : "") + "</em>";
+               (b.name ? "<s>" + e(b.name) + "</s>"
+                       : '<s class="unb">not bound</s>') + "</em>";
       }).join("");
     var cid = key("k", k.name);
     TIPS[cid] = tipConst(k);
@@ -443,7 +446,7 @@
     // granted skill on a line of its own -- which is the only way it gets
     // enough width to put its icon and both text lines on one baseline
     return '<div class="cst' + (k.complete ? " done" : "") + '" data-tip="' + cid + '">' +
-           '<b class="cname">' + e(k.label || k.name) + '</b><div class="cart">' + img + "</div>" +
+           '<b class="cname">' + e(k.name) + '</b><div class="cart">' + img + "</div>" +
            "<span><i>" + k.starsTaken + " / " + k.starsTotal + " stars</i>" + gr +
            "</span></div>";
   }

@@ -572,7 +572,9 @@
                                       (some-> sr (get "buffSkillName") not-empty str
                                               dbu/record-by-name
                                               (get "skillUpBitmapName") not-empty str))})]
-              :when (and nm (seq stars))]
+              ;; a star-less record is kept: the Crossroads keeps its artwork on
+              ;; one, and the stars on five others
+              :when nm]
           (let [star-recs (keep (fn [i]
                                   (some-> (get r (str "devotionButton" i)) not-empty str
                                           dbu/record-by-name
@@ -580,6 +582,8 @@
                                           dbu/record-by-name))
                                 (range 1 13))]
             {:name nm :bitmap bmp :bgX bx :bgY by
+             ;; dropped once the group is merged; only here to sum the totals
+             :star-recs star-recs
              :stars (vec stars)
              ;; the game joins its stars: devotionLinksN names the button (or
              ;; buttons) that button N connects to
@@ -607,31 +611,46 @@
                                         n (get r (str "affinityGiven" i))]
                                   :when (and a n (pos? (long n)))]
                               {:name (str a) :points (long n)}))}))
-        mine (filter #(some :taken (:stars %)) consts)]
+        ;; The Crossroads is one constellation as the game draws it -- a single
+        ;; compass rose -- but six records: one carrying the artwork and no
+        ;; stars, and five one-star records, one per affinity. Six blocks all
+        ;; called "Crossroads" is not what the player is looking at, so the
+        ;; records are put back together under the name the game shows them by.
+        ;; Every other constellation is a group of one and passes through.
+        merged (for [[nm group] (group-by :name consts)
+                     :let [art (or (first (filter :bitmap group)) (first group))
+                           recs (mapcat :star-recs group)]]
+                 {:name nm
+                  :bitmap (:bitmap art) :bgX (:bgX art) :bgY (:bgY art)
+                  :stars (vec (mapcat :stars group))
+                  :links (vec (mapcat :links group))
+                  :desc (some :desc group)
+                  :required (vec (distinct (mapcat :required group)))
+                  ;; what the whole thing gives once every star is in
+                  :affinity (vec (mapcat :affinity group))
+                  :total (summary (sum (map nums recs)))
+                  :petTotal (summary (sum (for [sr recs
+                                                :let [pb (some-> (get sr "petBonusName") not-empty str
+                                                                 dbu/record-by-name)]
+                                                :when pb]
+                                            (nums pb))))})
+        mine (filter #(some :taken (:stars %)) merged)]
     (identity
               {:constellations
-               ;; The five Crossroads are five separate one-star constellations
-               ;; that all answer to the same name, so a character holding two
-               ;; of them gets two blocks reading "Crossroads 1 / 1" and no way
-               ;; to tell what either one was. The affinity each gives is the
-               ;; thing that distinguishes them, so a shared name earns it.
-               ;; `:name` still has to be the name the artwork is keyed by.
-               (let [shared (frequencies (map :name mine))]
-                 (vec (for [k (sort-by (juxt :name #(str (first (map :name (:affinity %))))) mine)]
-                        (assoc k :starsTaken (count (filter :taken (:stars k)))
-                                 :starsTotal (count (:stars k))
-                                 :complete (every? :taken (:stars k))
-                                 :label (if (and (> (long (get shared (:name k) 0)) 1)
-                                                 (seq (:affinity k)))
-                                          (str (:name k) " · "
-                                               (str/join " / " (map :name (:affinity k))))
-                                          (:name k))))))
+               (vec (for [k (sort-by :name mine)]
+                      (assoc k :starsTaken (count (filter :taken (:stars k)))
+                               :starsTotal (count (:stars k))
+                               :complete (every? :taken (:stars k)))))
                ;; affinity is granted by completing a constellation, and is what
                ;; the game's Affinities panel counts -- which lists every
                ;; affinity in its own order, including the ones still at nothing
+               ;; counted on the records the game grants it on rather than on
+               ;; the merged block: each Crossroads star pays its affinity on
+               ;; its own, and the rose as a whole is not complete until all
+               ;; five are taken
                :affinities
-               (let [earned (->> mine
-                                 (filter #(every? :taken (:stars %)))
+               (let [earned (->> consts
+                                 (filter #(and (seq (:stars %)) (every? :taken (:stars %))))
                                  (mapcat :affinity)
                                  (reduce (fn [m {:keys [name points]}]
                                            (update m name (fnil + 0) points)) {}))
