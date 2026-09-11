@@ -126,6 +126,8 @@ SUPPORT
 Support is via the forum page for gd-edit only. Only bug fixes will be reviewed.
 Feature requests will not be considered.
 
+    https://forums.crateentertainment.com/t/tool-gd-save-file-editor/35817
+
 The GitHub repository does not accept issues, so the forum thread is the place to
 raise one.
 
