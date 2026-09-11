@@ -431,14 +431,16 @@
     var gr = k.stars.filter(function (s) { return s.taken && s.skill && s.name; })
       .map(function (s) {
         var b = s.bound || {};
-        var tex = String(b.tex || s.tex || "").toLowerCase().replace(/^ui\//, "");
-        var gi = (treeico[tex] || {}).uri || "";
-        // a proc does nothing until it is bound to a skill, so an empty
-        // binding is worth saying rather than leaving the icon on its own
+        // The icon belongs to the binding, not to the devotion, so an unbound
+        // proc has no icon to show: falling back to the star's own art put a
+        // picture in the "bound to" slot that was not a binding at all. The
+        // game marks the empty slot with a question mark; this says it.
+        var tex = String(b.tex || "").toLowerCase().replace(/^ui\//, "");
+        var gi = b.name ? (treeico[tex] || {}).uri || "" : "";
         return "<em>" + (gi ? '<img src="' + gi + '" alt="">' : "") +
                "<u>" + e(s.name) + "</u>" +
                (b.name ? "<s>" + e(b.name) + "</s>"
-                       : '<s class="unb">not bound</s>') + "</em>";
+                       : '<s class="unb">Unbound</s>') + "</em>";
       }).join("");
     var cid = key("k", k.name);
     TIPS[cid] = tipConst(k);

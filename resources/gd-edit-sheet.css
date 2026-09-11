@@ -207,8 +207,9 @@ section.wide{grid-column:1/-1}
 /* both text lines occupy column two, so they share a left edge whatever their width */
 .cst span em s{grid-column:2;grid-row:2;text-decoration:none;font-size:22px;font-weight:400;color:var(--dim);line-height:1.25;min-width:0}
 /* a proc nothing has been bound to: said plainly, and set back so it does not
-   read as the name of a skill */
-.cst span em s.unb{color:var(--faint);font-style:italic}
+   read as the name of a skill. No icon goes with it, so it starts at the left
+   rather than leaving a hole where one would have been */
+.cst span em s.unb{color:var(--faint);font-style:italic;grid-column:1 / -1}
 
 /* ---- backdrop -----------------------------------------------------------
    Our own backdrop rather than the game's art: a cold aurora over dark ground,
