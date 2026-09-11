@@ -511,7 +511,9 @@
       '<input type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>' +
     "</figure></div>";
 
-  var page = '<div class="wrap">' +
+  // written with --no-art: the page says so, and the stylesheet closes up the
+  // spaces where the pictures would have been rather than leaving empty boxes
+  var page = '<div class="wrap' + (D.art === false ? " noart" : "") + '">' +
     '<div class="topline"><span>Difficulty: <b>' + e(c.difficulty) + "</b></span>" +
     "<span>" + e(c.expansion || "") + (c.version ? " · " : "") +
       "<i>" + e(c.version || "") + "</i></span></div>" +
