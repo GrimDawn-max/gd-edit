@@ -157,7 +157,7 @@
   // A constellation the way the game presents it: what every star adds up to,
   // what it costs in affinity, and what completing it pays back.
   function tipConst(k) {
-    var out = ['<h5 class="skn">' + e(k.name) + "</h5>"];
+    var out = ['<h5 class="skn">' + e(k.label || k.name) + "</h5>"];
     if (k.desc) out.push('<div class="rdesc">' + e(k.desc) + "</div>");
     out.push('<div class="tm">' + k.starsTaken + " of " + k.starsTotal + " stars" +
              (k.complete ? " · complete" : "") + "</div>");
@@ -425,7 +425,10 @@
     // the skill a constellation pays out at the end. The game shows the icon of
     // the class skill the proc is bound to, not the constellation's own art --
     // Shepherd's Call reads as Curse of Frailty.
-    var gr = k.stars.filter(function (s) { return s.skill && s.name; })
+    // only stars actually taken: an untaken one grants nothing, and cannot be
+    // bound to anything either, so it arrived with no skill beside it and read
+    // as a skill the character had whose binding had gone missing
+    var gr = k.stars.filter(function (s) { return s.taken && s.skill && s.name; })
       .map(function (s) {
         var b = s.bound || {};
         var tex = String(b.tex || s.tex || "").toLowerCase().replace(/^ui\//, "");
@@ -440,7 +443,7 @@
     // granted skill on a line of its own -- which is the only way it gets
     // enough width to put its icon and both text lines on one baseline
     return '<div class="cst' + (k.complete ? " done" : "") + '" data-tip="' + cid + '">' +
-           '<b class="cname">' + e(k.name) + '</b><div class="cart">' + img + "</div>" +
+           '<b class="cname">' + e(k.label || k.name) + '</b><div class="cart">' + img + "</div>" +
            "<span><i>" + k.starsTaken + " / " + k.starsTotal + " stars</i>" + gr +
            "</span></div>";
   }

@@ -960,7 +960,11 @@
                  (format "%s Damage to %s" (signed-number absolute-dmg ) (dbu/race-name race-tag)))
                (when-let [percent-def (lookup-and-resolve record "racialBonusPercentDefense")]
                  (format "%s Less Damage from %s" (percentage percent-def ) (dbu/race-name race-tag)))
-               (when-let [dmg-percent (record "racialBonusPercentDamage")]
+               ;; through lookup-and-resolve like its two neighbours: on a skill
+               ;; record this is a value per rank -- Oathkeeper's weapon attack
+               ;; carries 20 of them -- and reading it raw hands a vector to
+               ;; code that expects a number, which throws rather than printing
+               (when-let [dmg-percent (lookup-and-resolve record "racialBonusPercentDamage")]
                  (format "%s Damage to %s" (signed-percentage dmg-percent) (dbu/race-name race-tag)))]))
 
            ;; General effects
