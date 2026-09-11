@@ -121,8 +121,11 @@ From there, [the commands](commands.md) describe what you can do, and the
 
 ## Support
 
-There is none. This is provided as-is, with no support and no bug reports, and
-the repository does not accept issues.
+Support is via the [forum page for gd-edit](https://forums.crateentertainment.com/t/tool-gd-save-file-editor/35817) only.
+Only bug fixes will be reviewed. Feature requests will not be considered.
+
+The repository does not accept issues, so the forum thread is the place to raise
+one.
 
 It will be updated if a game patch or expansion breaks it. Nothing else is
 promised. If something goes wrong, restore a save backup — which is why the

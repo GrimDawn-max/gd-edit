@@ -15,17 +15,17 @@ stats, a seed search, ascended affixes and illusion support.
 Distributed under the Eclipse Public License, the same licence as the original.
 See [LICENSE](LICENSE).
 
-## Support: none — and that is deliberate
+## Support
 
-This is shared as-is, for anyone who finds it useful. **Issues are turned off
-and no support is provided.** It was built to fix one person's save files, and
-it worked for those.
+Support is via the [forum page for gd-edit](https://forums.crateentertainment.com/t/tool-gd-save-file-editor/35817) only.
+Only bug fixes will be reviewed. Feature requests will not be considered.
 
-If it does not work for you, or breaks on a future patch, you are very welcome
-to fork it and fix it. The source is here, the save format work is documented in
-the commit history and in comments, and modern AI coding tools are quite good at
-this kind of binary-format debugging — that is largely how these fixes were
-found. Pull requests will not be monitored.
+**Issues here are turned off**, so the forum thread is the place to raise one.
+
+You are also very welcome to fork it and fix it yourself. The source is here, the
+save format work is documented in the commit history and in comments, and modern
+AI coding tools are quite good at this kind of binary-format debugging — that is
+largely how these fixes were found. Pull requests will not be monitored.
 
 Back up your saves before using this.
 
