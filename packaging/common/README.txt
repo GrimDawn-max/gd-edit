@@ -123,8 +123,11 @@ gd-edit writes a .bak copy when it saves, but keeping your own copy is wise.
 SUPPORT
 -------
 
-There is none. This build is provided as-is, with no support, no bug reports and
-no way to get in touch. The GitHub repository does not accept issues.
+Support is via the forum page for gd-edit only. Only bug fixes will be reviewed.
+Feature requests will not be considered.
+
+The GitHub repository does not accept issues, so the forum thread is the place to
+raise one.
 
 It will be updated if a game patch or expansion breaks it. Nothing else is
 promised. If something is wrong, back out to a save backup -- that is why the
