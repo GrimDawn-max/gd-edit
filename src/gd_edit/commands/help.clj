@@ -213,7 +213,7 @@
 
    ["write character-sheet" "Write the loaded character as a web page"
     (str/join "\n"
-              ["Syntax: write character-sheet <path to write> [picture] [--no-art]"
+              ["Syntax: write character-sheet <path to write> [pictures...] [--no-art]"
                ""
                "Examples:"
                "  write character-sheet ~/Desktop/mary.html"
@@ -248,8 +248,18 @@
                "The panel beside the gear takes a character screenshot: drag one onto"
                "it in the browser, and it stays in that browser against the character."
                "Name a picture on the command line instead and it is written into the"
-               "file, which is what a page meant to be sent somewhere wants. Drop"
-               "several shots taken a rotation step apart and the character turns."])]
+               "file, which is what a page meant to be sent somewhere wants -- a"
+               "dropped one lives in your browser and does not travel with the file."
+               ""
+               "Name several, taken a rotation step apart as the game's own arrow"
+               "turns the character, and the sheet arrives already turning. A folder"
+               "means every picture in it, in the order their names put them, counting"
+               "numbers as numbers so C10 follows C9:"
+               ""
+               "  write character-sheet ~/Desktop/mary.html ~/Desktop/frames/"
+               ""
+               "They are scaled on the way in, so a set of screenshots adds a few"
+               "hundred KB rather than the tens of MB they weigh on disk."])]
 
    ["write character-csv" "Write the loaded character to a csv file"
     (str/join "\n"

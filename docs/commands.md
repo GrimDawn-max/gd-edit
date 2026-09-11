@@ -517,16 +517,30 @@ The wording is still theirs — item names, stat phrasing, skill descriptions al
 out of their database — so it is a smaller thing to think about, not nothing.
 
 **The picture.** The panel beside the gear takes a character screenshot. Drag one
-onto it in the browser and it stays in that browser, against that character. Name a
-picture on the command line instead and it is written into the file itself, which is
-what a page meant to be sent somewhere wants:
+onto it in the browser and it stays in that browser, against that character — under
+that character's name, so any sheet of them picks it up. What it does *not* do is
+travel: a dropped picture lives in your browser, not in the file.
+
+For a page you mean to send, name the picture on the command line and it is written
+into the file itself:
 
 ```
 write character-sheet ~/Desktop/mary.html ~/Desktop/screenshot.png
 ```
 
-PNG, JPEG or WebP. Drop several shots taken a rotation step apart — the game's own
-arrow turns the character — and the panel turns with them.
+PNG, JPEG or WebP. Name several — taken a rotation step apart, as the game's own
+arrow turns the character — and the sheet arrives already turning. A folder means
+every picture in it, in the order their names put them, counting numbers as numbers
+so `C10` follows `C9` rather than `C1`:
+
+```
+write character-sheet ~/Desktop/mary.html ~/Desktop/frames/
+```
+
+They are scaled on the way in, so ten screenshots add a few hundred KB rather than
+the tens of megabytes they weigh on disk. The page measures each one and centres it,
+so the figure sits still and only the pose changes — screenshots taken by hand are
+never quite the same crop twice.
 
 ---
 

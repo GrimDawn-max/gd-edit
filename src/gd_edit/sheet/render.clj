@@ -14,7 +14,8 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [gd-edit.sheet.art :as art]
-            [gd-edit.sheet.data :as data]))
+            [gd-edit.sheet.data :as data]
+            [gd-edit.sheet.tex :as tex]))
 
 (defn- resource [n]
   (if-let [r (io/resource n)]
@@ -54,25 +55,73 @@
                family style weight
                (.encodeToString (java.util.Base64/getEncoder) bytes))))))
 
-(defn- portrait-img
-  "A picture baked into the page, if the caller named one.
+(defn- jpeg-uri
+  "`img` as a JPEG data URI. JPEG has no alpha, so it is drawn onto an opaque
+  surface first -- writing an ARGB image straight out comes back wrong."
+  [^java.awt.image.BufferedImage img]
+  (let [flat (java.awt.image.BufferedImage. (.getWidth img) (.getHeight img)
+                                            java.awt.image.BufferedImage/TYPE_INT_RGB)
+        g (.createGraphics flat)]
+    (.drawImage g img 0 0 java.awt.Color/BLACK nil)
+    (.dispose g)
+    (let [w (first (iterator-seq (javax.imageio.ImageIO/getImageWritersByFormatName "jpeg")))
+          bo (java.io.ByteArrayOutputStream.)
+          out (javax.imageio.ImageIO/createImageOutputStream bo)
+          param (doto (.getDefaultWriteParam w)
+                  (.setCompressionMode javax.imageio.ImageWriteParam/MODE_EXPLICIT)
+                  (.setCompressionQuality 0.86))]
+      (.setOutput w out)
+      (.write w nil (javax.imageio.IIOImage. flat nil nil) param)
+      (.dispose w)
+      (.close out)
+      (str "data:image/jpeg;base64,"
+           (.encodeToString (java.util.Base64/getEncoder) (.toByteArray bo))))))
 
-  Without it the panel invites the reader to drop one in, which is kept in
+(defn- picture-uri
+  "One picture as a data URI, no larger than `cap` on its longest side.
+
+  A screenshot off a modern display is several megabytes, and ten of them would
+  weigh more than everything else on the page put together. Anything over the
+  cap is scaled and re-encoded; anything already under it is passed through
+  exactly as it was, so a picture that is small enough keeps its own bytes."
+  [path ^long cap]
+  (let [f (io/file path)]
+    (when-not (.exists f)
+      (throw (ex-info (str "no such picture: " path) {:path path})))
+    (let [ext (str/lower-case (or (last (str/split (.getName f) #"\.")) ""))
+          mime (case ext ("jpg" "jpeg") "jpeg" "png" "png" "webp" "webp"
+                     (throw (ex-info (str "a portrait must be PNG, JPEG or WebP, not " ext)
+                                     {:path path})))
+          ;; ImageIO does not read WebP, and returns nil rather than throwing
+          img (try (javax.imageio.ImageIO/read f) (catch Exception _ nil))]
+      (if (and img (> (max (.getWidth img) (.getHeight img)) cap))
+        (jpeg-uri (tex/scale img cap))
+        (str "data:image/" mime ";base64,"
+             (.encodeToString (java.util.Base64/getEncoder)
+                              (java.nio.file.Files/readAllBytes (.toPath f))))))))
+
+(defn- portrait-img
+  "The pictures baked into the page, if the caller named any.
+
+  Without them the panel invites the reader to drop one in, which is kept in
   their browser rather than in the file -- so a sheet meant to be sent
-  somewhere wants the picture put in at this point."
-  [path]
-  (when path
-    (let [f (io/file path)]
-      (when-not (.exists f)
-        (throw (ex-info (str "no such picture: " path) {:path path})))
-      (let [ext (str/lower-case (or (last (str/split (.getName f) #"\.")) ""))
-            mime (case ext ("jpg" "jpeg") "jpeg" "png" "png" "webp" "webp"
-                       (throw (ex-info (str "a portrait must be PNG, JPEG or WebP, not " ext)
-                                       {:path path})))
-            bytes (java.nio.file.Files/readAllBytes (.toPath f))]
-        (str "<img src=\"data:image/" mime ";base64,"
-             (.encodeToString (java.util.Base64/getEncoder) bytes)
-             "\" alt=\"\">")))))
+  somewhere wants the picture put in at this point. Name several, taken a
+  rotation step apart, and the sheet arrives already turning.
+
+  They are handed over hidden: the page lifts them into the stack it turns,
+  measuring and centring them on the way, which is the same thing it does with
+  a picture dropped on it by hand."
+  [paths]
+  (when (seq paths)
+    (let [n (count paths)
+          ;; fewer frames can afford more pixels -- the same budget the page
+          ;; applies to a dropped set, so a baked rotation and a dropped one
+          ;; come out the same weight
+          cap (cond (<= n 2) 900 (<= n 6) 750 :else 560)]
+      (str "<div class=\"pbaked\" hidden>"
+           (str/join (for [p paths]
+                       (str "<img src=\"" (picture-uri p cap) "\" alt=\"\">")))
+           "</div>"))))
 
 (defn- escape [s]
   (-> (str s)
@@ -108,7 +157,7 @@
      :compicons (or compicons {})
      :treeicons (if art? (art/tree-art tree devo buffs) {})
      :resicons (if art? (art/resistance-art) {})
-     :portrait (or (portrait-img portrait) "")}))
+     :portrait (or (portrait-img (if (coll? portrait) portrait (remove nil? [portrait]))) "")}))
 
 (defn document
   "The HTML around the sheet: a title, the styles, then the scripts.
