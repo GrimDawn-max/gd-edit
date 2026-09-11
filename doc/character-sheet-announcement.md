@@ -49,6 +49,18 @@ actual rolls rather than what an item can roll.
   several taken a rotation step apart and the character turns.
 - The figures have been checked against the game on my own characters.
 
+### Sharing one
+
+The file is self-contained, so you can send it to anyone: they need no copy of
+Grim Dawn, no gd-edit and no internet connection. Everything works for them
+exactly as it does for you — every tooltip, every hover, the lot. The one thing
+that does not travel is the portrait, which lives in the browser you dropped it
+into rather than in the file.
+
+It fetches nothing. There is no network code in it at all — no downloads, no
+calls out, nothing to a server. You can confirm that by opening it in a text
+editor.
+
 ---
 
 ## Before this can be posted
