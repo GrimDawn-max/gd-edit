@@ -429,10 +429,18 @@
                             :when (and (seq nm) (not mastery?))]
                         (let [pts (long (get spent (str/lower-case sn) 0))
                               eff (long (effective-level* bonuses sn pts))
-                              ;; bonuses that run past the ceiling are wasted,
-                              ;; which is the case the game prints in red --
-                              ;; reaching the ceiling exactly is not
-                              pinned (> (long (raw-level* bonuses sn pts)) eff)
+                              ;; Bonuses that run past the ceiling are wasted,
+                              ;; which is the case the game prints in red.
+                              ;; Reaching the ceiling exactly is not, and
+                              ;; neither is a skill that cannot be lifted at
+                              ;; all: where skillUltimateLevel equals the
+                              ;; spendable cap -- every one-point transmuter --
+                              ;; a "+1 to all skills" is cut in full, so the row
+                              ;; shows no bonus, and marking it as one cut would
+                              ;; be marking something the reader cannot see.
+                              ;; Red needs a visible bonus to be talking about.
+                              pinned (and (> (long (raw-level* bonuses sn pts)) eff)
+                                          (> eff pts))
                               ;; the cap, the icon and the description all come
                               ;; from whichever record actually carries them
                               sr* (real sr)
@@ -602,19 +610,33 @@
         mine (filter #(some :taken (:stars %)) consts)]
     (identity
               {:constellations
-               (vec (for [k (sort-by :name mine)]
-                      (assoc k :starsTaken (count (filter :taken (:stars k)))
-                               :starsTotal (count (:stars k))
-                               :complete (every? :taken (:stars k)))))
+               ;; The five Crossroads are five separate one-star constellations
+               ;; that all answer to the same name, so a character holding two
+               ;; of them gets two blocks reading "Crossroads 1 / 1" and no way
+               ;; to tell what either one was. The affinity each gives is the
+               ;; thing that distinguishes them, so a shared name earns it.
+               ;; `:name` still has to be the name the artwork is keyed by.
+               (let [shared (frequencies (map :name mine))]
+                 (vec (for [k (sort-by (juxt :name #(str (first (map :name (:affinity %))))) mine)]
+                        (assoc k :starsTaken (count (filter :taken (:stars k)))
+                                 :starsTotal (count (:stars k))
+                                 :complete (every? :taken (:stars k))
+                                 :label (if (and (> (long (get shared (:name k) 0)) 1)
+                                                 (seq (:affinity k)))
+                                          (str (:name k) " · "
+                                               (str/join " / " (map :name (:affinity k))))
+                                          (:name k))))))
                ;; affinity is granted by completing a constellation, and is what
-               ;; the game's Affinities panel counts
+               ;; the game's Affinities panel counts -- which lists every
+               ;; affinity in its own order, including the ones still at nothing
                :affinities
-               (->> mine
-                    (filter #(every? :taken (:stars %)))
-                    (mapcat :affinity)
-                    (reduce (fn [m {:keys [name points]}] (update m name (fnil + 0) points)) {})
-                    (sort-by (comp - val))
-                    (mapv (fn [[n p]] {:name n :points p})))})))
+               (let [earned (->> mine
+                                 (filter #(every? :taken (:stars %)))
+                                 (mapcat :affinity)
+                                 (reduce (fn [m {:keys [name points]}]
+                                           (update m name (fnil + 0) points)) {}))
+                     all (into (sorted-set) (for [k consts, a (:affinity k)] (:name a)))]
+                 (mapv (fn [n] {:name n :points (long (get earned n 0))}) all))})))
 
 (defn buff-data
   "What is running on the character: auras, activated skills and procs."
