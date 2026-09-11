@@ -57,6 +57,24 @@ source is available from the listed project pages.
   clansi (vendored in src/clansi)      Eclipse Public License 1.0
 
 
+FONTS
+-----
+
+A character sheet written by "write character-sheet" carries the faces it is set
+in, so the page needs nothing from a font host when it is opened. Latin subsets
+only, taken from Google Fonts. Both families are under the SIL Open Font License
+1.1, which permits this:
+
+  Libertinus Serif, Libertinus Mono   SIL Open Font License 1.1
+      https://github.com/alerque/libertinus
+
+  Jura                                SIL Open Font License 1.1
+      https://github.com/ossobuffo/jura
+
+The license text travels with each family at the project pages above. The font
+files themselves live in resources/sheet-fonts in this repository.
+
+
 ITEM STAT ENGINE
 ----------------
 
