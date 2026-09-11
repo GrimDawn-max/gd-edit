@@ -314,8 +314,11 @@ make-char ~/Downloads/get_build_data.php.json
 
 ## Support
 
-There is none. This is provided as-is, with no support and no bug reports, and
-the repository does not accept issues.
+Support is via the forum page for gd-edit only. Only bug fixes will be reviewed.
+Feature requests will not be considered.
+
+The repository does not accept issues, so the forum thread is the place to raise
+one.
 
 It will be updated if a game patch or expansion breaks it. If something goes
 wrong, restore a save backup.
