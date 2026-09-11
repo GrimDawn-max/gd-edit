@@ -589,6 +589,15 @@
     "skillChargeMultipliers"
     })
 
+(def primary-only-fields
+  "Printed with the item's own properties rather than among its effects.
+
+  A shield's block is a property of the shield, and the game puts it at the top
+  above the damage. Sorted as an effect it lands in the middle of the
+  resistances -- defensiveBlock begins with \"defensive\" like every one of
+  them -- with the recovery adrift at the end of the list."
+  #{"defensiveBlock" "defensiveBlockChance" "blockRecoveryTime" "blockAbsorption"})
+
 (def ^:dynamic *pet-bonus*
   "The rolled Bonus to All Pets for the item being summarized, or nil.
 
@@ -987,6 +996,7 @@
            ;; General effects
            (for [kv (->> record
                          (filter #(and (string? (key %))
+                                       (not (primary-only-fields (key %)))
                                        (looks-like-effect-keyname (key %))))
                          (sort-by key #(< (effect-display-order %) (effect-display-order %2))))]
              (effect-kv->string record kv))
@@ -1066,7 +1076,11 @@
 (defn record-primary-attributes
   [record]
 
-  [(when-let [defensive-protection (record "defensiveProtection")]
+  [(when-let [block (record "defensiveBlock")]
+     (effect-kv->string record ["defensiveBlock" block]))
+   (when-let [recovery (record "blockRecoveryTime")]
+     (effect-kv->string record ["blockRecoveryTime" recovery]))
+   (when-let [defensive-protection (record "defensiveProtection")]
      (effect-kv->string record ["defensiveProtection" defensive-protection]))
    (when-let [physical-dmg (record "offensivePhysicalMin")]
      (effect-kv->string record ["offensivePhysicalMin" physical-dmg]))
