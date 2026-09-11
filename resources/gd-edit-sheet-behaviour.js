@@ -17,7 +17,10 @@ window.gdSheetReady = function () {
   const stack = fig.querySelector('.pstack');
   const cap = fig.querySelector('.pcap');
   const bar = fig.querySelector('.pbar');
-  const baked = !!fig.querySelector('img');
+  // pictures written into the file by the generator, handed over hidden so the
+  // page can lift them into the stack it turns rather than showing them raw
+  const bakedBox = fig.querySelector('.pbaked');
+  let baked = !!bakedBox;
   let frames = [], at = 0, timer = null;
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // A whole second a step. The game turns a character at about this rate, and
@@ -71,8 +74,47 @@ window.gdSheetReady = function () {
     catch (e) { cap.textContent = 'too large to remember \u2014 shown for now'; }
   }
 
+  function dropBaked() { if (bakedBox && bakedBox.parentNode) bakedBox.remove(); }
+
+  // A baked set goes through the same measuring as a dropped one, so a turn
+  // sits still rather than jittering -- except for a lone picture, which has
+  // nothing to be aligned against and is shown exactly as it was given.
+  function useBaked() {
+    const imgs = [].slice.call(bakedBox.querySelectorAll('img'));
+    if (!imgs.length) return;
+    if (imgs.length === 1) {
+      frames = [imgs[0].getAttribute('src')];
+      dropBaked(); build();
+      return;
+    }
+    const loaded = new Array(imgs.length);
+    let done = 0;
+    function ready() {
+      if (++done < imgs.length) return;
+      dropBaked();
+      finish(loaded, false);
+    }
+    imgs.forEach(function (im, i) {
+      function measure() {
+        try {
+          const c = document.createElement('canvas');
+          c.width = im.naturalWidth; c.height = im.naturalHeight;
+          const cx = c.getContext('2d', {willReadFrequently: true});
+          cx.drawImage(im, 0, 0);
+          loaded[i] = {im: im, box: contentBox(c, cx)};
+        } catch (e) {
+          loaded[i] = {im: im, box: {x: 0, y: 0, w: im.naturalWidth, h: im.naturalHeight}};
+        }
+        ready();
+      }
+      if (im.complete && im.naturalWidth) measure();
+      else { im.onload = measure; im.onerror = function () { loaded[i] = null; ready(); }; }
+    });
+  }
+
   if (baked) {
     fig.classList.add('has', 'baked');
+    useBaked();
   } else {
     try {
       const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
@@ -117,6 +159,9 @@ window.gdSheetReady = function () {
       return;
     }
     stop();
+    // dropping your own picture over one the sender baked in replaces it, and
+    // hands the panel back: the clear button returns and so does the picker
+    if (baked) { baked = false; fig.classList.remove('baked'); dropBaked(); }
     cap.textContent = 'reading ' + list.length + '\u2026';
     const loaded = new Array(list.length);
     let done = 0;
@@ -133,11 +178,11 @@ window.gdSheetReady = function () {
           try { box = contentBox(c, cx); }
           catch (e) { box = {x: 0, y: 0, w: im.width, h: im.height}; }
           loaded[i] = {im: im, box: box};
-          if (++done === list.length) finish(loaded);
+          if (++done === list.length) finish(loaded, true);
         };
         im.onerror = function () {
           loaded[i] = null;
-          if (++done === list.length) finish(loaded);
+          if (++done === list.length) finish(loaded, true);
         };
         im.src = fr.result;
       };
@@ -145,7 +190,7 @@ window.gdSheetReady = function () {
     });
   }
 
-  function finish(loaded) {
+  function finish(loaded, remember) {
     const good = loaded.filter(Boolean);
     if (!good.length) { cap.textContent = ''; return; }
     // one canvas for every frame, sized to the largest figure, with each scaled
@@ -168,7 +213,8 @@ window.gdSheetReady = function () {
                    g.box.w * s, g.box.h * s);
       return cv.toDataURL('image/jpeg', 0.86);
     });
-    build(); keep();
+    build();
+    if (remember) keep();
     if (!still) play();
   }
 

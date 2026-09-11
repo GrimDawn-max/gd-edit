@@ -382,6 +382,8 @@ h1{font-family:"Libertinus Serif",Palatino,Georgia,serif;letter-spacing:0}
 /* every frame decoded once and stacked; turning only changes which is shown,
    so there is no decode on the swap to make it hitch */
 .pstack{position:absolute;inset:0}
+/* baked-in pictures, waiting to be lifted into the stack above */
+.pbaked{display:none}
 .pstack img,.dart>img{position:absolute;inset:0;width:100%;height:100%;
   object-fit:contain;object-position:center;display:none}
 .pstack img.on,.dart>img{display:block}

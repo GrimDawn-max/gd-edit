@@ -13,6 +13,35 @@
       (format "%d KB" (quot n 1024))
       (format "%.1f MB" (/ n 1048576.0)))))
 
+(def ^:private picture-ext #{"png" "jpg" "jpeg" "webp"})
+
+(defn- natural-key
+  "Sort key that counts a run of digits as a number.
+
+  Screenshots come off the key in a sequence, and plain text order puts C10
+  between C1 and C2 -- which turns a rotation into a stutter."
+  [s]
+  (mapv (fn [part]
+          (if (re-matches #"\d+" part)
+            [0 (bigint part) ""]
+            [1 0 (str/lower-case part)]))
+        (re-seq #"\d+|\D+" (str s))))
+
+(defn- pictures
+  "Every picture a path names: the file itself, or all of those in a directory.
+
+  Ten frames are a lot to type and a prompt does not expand a glob, so naming
+  the folder is taken to mean all of it."
+  [path]
+  (let [f (io/file path)]
+    (if (.isDirectory f)
+      (->> (.listFiles f)
+           (filter #(.isFile ^java.io.File %))
+           (map #(.getPath ^java.io.File %))
+           (filter #(picture-ext (str/lower-case (or (last (str/split % #"\.")) ""))))
+           (sort-by (comp natural-key #(.getName (io/file %)))))
+      [path])))
+
 ;; --no-art writes the sheet with none of the game's pictures in it. Anything
 ;; beginning with a dash is a switch rather than a path, so an unknown one is
 ;; worth saying so about: silently treating it as a filename would write the
@@ -50,6 +79,11 @@
         (u/newline-)
         (u/print-line "    write character-sheet ~/Desktop/mysheet.html ~/Desktop/screenshot.png")
         (u/newline-)
+        (u/print-line "Name several, taken a rotation step apart, and it arrives turning.")
+        (u/print-line "A folder means every picture in it:")
+        (u/newline-)
+        (u/print-line "    write character-sheet ~/Desktop/mysheet.html ~/Desktop/frames/")
+        (u/newline-)
         (u/print-line "Add --no-art for a sheet with none of the game's pictures in it,")
         (u/print-line "which is the one to post somewhere public:")
         (u/newline-)
@@ -58,16 +92,22 @@
       :else
       ;; ~ is what a path looks like when it is typed rather than pasted, and the
       ;; shell that would have expanded it is not in the way here
-      (let [[path portrait] (map #(some-> % u/expand-home) paths)
+      (let [[path & named] (map #(some-> % u/expand-home) paths)
+            pics (mapcat pictures named)
             art? (not (contains? flags "--no-art"))]
         (try
           (u/print-line (if art?
                           "Reading the database for icons and artwork..."
                           "Reading the database..."))
           (let [f (render/write! @globals/character path
-                                 :portrait portrait :art? art?)]
+                                 :portrait pics :art? art?)]
             (u/newline-)
             (u/print-line (format "Written %s  (%s)" (.getAbsolutePath f) (size-of f)))
+            (when (seq pics)
+              (u/print-line (if (= 1 (count pics))
+                              "With the picture you named written into it."
+                              (format "With %d pictures written into it, so it arrives turning."
+                                      (count pics)))))
             (u/newline-)
             (if art?
               (do
