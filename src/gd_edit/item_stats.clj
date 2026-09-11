@@ -114,13 +114,25 @@
   reads as 17% in the tooltip. Of the 54 values checked against real items only
   one was fractional at all, and rounding is what made it agree.
 
+  Except where the record's own value is fractional, in which case the fraction
+  is the stat rather than noise in the roll. A shield blocks in 0.65 seconds and
+  the game says so; rounding read it as 1. The record decides: a whole base is a
+  stat the game shows whole, so its roll is rounded, while a fractional base --
+  block recovery, energy regeneration, the attack speed on a weapon -- keeps
+  what it rolled. A conversion is the case that proves the default, its base a
+  whole 25 against a roll of 25.137 and a tooltip reading 25%.
+
   Returns the record untouched when the stats cannot be computed, which is what
   makes the whole feature optional."
   [record item]
 
   (if-let [rolled (rolled-stats item)]
-    (merge record (into {} (for [[k v] rolled]
-                             [k (double (Math/round ^double v))])))
+    (let [whole? (fn [x] (and (number? x)
+                              (== (double x) (double (Math/round (double x))))))]
+      (merge record (into {} (for [[k v] rolled]
+                               [k (if (whole? (get record k))
+                                    (double (Math/round ^double v))
+                                    (double v))]))))
     record))
 
 ;; ------------------------------------------------- completion bonuses

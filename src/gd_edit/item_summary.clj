@@ -628,6 +628,23 @@
           nil
 
 
+          ;; A shield's block, in the game's own words: "34% Chance to block
+          ;; 975 damage", with the recovery on a line of its own. The generic
+          ;; path treated defensiveBlock as though it were a resistance -- every
+          ;; other defensiveX is one -- and printed "34% Chance of 975% Block
+          ;; Resistance", which is neither the right words nor the right unit.
+          ;; The recovery never appeared at all.
+          (= k "defensiveBlock")
+          (format "%s Chance to block %s damage"
+                  (percentage (lookup-and-resolve record "defensiveBlockChance"))
+                  (u/maybe-int v))
+          (= k "defensiveBlockChance") nil
+          (= k "blockRecoveryTime")
+          (format "%s second Block Recovery" (u/maybe-int v))
+          ;; absorption is 100 on all but a handful of shields and the game
+          ;; prints no line for it
+          (= k "blockAbsorption") nil
+
           (str/starts-with? k "conversionInType")
           ;; Without a percentage there is no conversion to describe.
           (when-let [pct (percentage (lookup-and-resolve record "conversionPercentage"))]
