@@ -110,18 +110,38 @@
      :resicons (if art? (art/resistance-art) {})
      :portrait (or (portrait-img portrait) "")}))
 
+(defn document
+  "The HTML around the sheet: a title, the styles, then the scripts.
+
+  Kept separate from the data so the shape of the page can be checked without a
+  game database behind it -- see sheet_test.clj. The one thing that shape has to
+  get right is <body>, and it is the one thing a browser looks like it would
+  forgive."
+  [title style scripts]
+  (str "<!doctype html>\n<meta charset=\"utf-8\">\n"
+       "<title>" (escape title) " — Character Sheet</title>\n"
+       "<style>\n" style "\n</style>\n"
+       ;; <body> has to be written out, even though a browser supplies one for a
+       ;; page that has any content of its own. A doctype, a meta, a title, a
+       ;; style and a script are all valid *head* content, so a page that is
+       ;; nothing but those leaves the parser still filling in the head when the
+       ;; last script runs: document.body is null, the renderer throws on the
+       ;; first line that touches it, and the page comes out blank. Opening the
+       ;; element here puts the parser into the body before any script runs.
+       "<body>\n"
+       (str/join "\n" (map #(str "<script>" % "</script>") scripts))
+       "\n"))
+
 (defn page
   "The finished HTML."
   [character & {:keys [portrait art?] :or {art? true}}]
-  (let [d (sheet-data character :portrait portrait :art? art?)
-        nm (get-in d [:sheet :character :name])]
-    (str "<!doctype html>\n<meta charset=\"utf-8\">\n"
-         "<title>" (escape nm) " — Character Sheet</title>\n"
-         "<style>\n" (font-face-css) "\n" (resource "gd-edit-sheet.css") "\n</style>\n"
-         ;; the data first, then what draws it, then what makes it respond
-         "<script>window.DATA=" (json/write-str d) ";</script>\n"
-         "<script>\n" (resource "gd-edit-sheet-behaviour.js") "\n</script>\n"
-         "<script>\n" (resource "gd-edit-sheet.js") "\n</script>\n")))
+  (let [d (sheet-data character :portrait portrait :art? art?)]
+    (document (get-in d [:sheet :character :name])
+              (str (font-face-css) "\n" (resource "gd-edit-sheet.css"))
+              ;; the data first, then what makes it respond, then what draws it
+              [(str "window.DATA=" (json/write-str d) ";")
+               (str "\n" (resource "gd-edit-sheet-behaviour.js") "\n")
+               (str "\n" (resource "gd-edit-sheet.js") "\n")])))
 
 (defn write!
   "Write `character`'s sheet to `path`. Returns the file."
