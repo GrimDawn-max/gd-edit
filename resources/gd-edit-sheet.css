@@ -1,0 +1,486 @@
+/* Character sheet styles.
+
+   Flattened: every selector is declared once. It had grown to nine .dmid rules,
+   four .figure and three .wrap from successive fixes, where only the last of
+   each won and the rest were dead weight -- which is how an auto margin sat
+   overriding an alignment for several rounds without being spotted. */
+
+:root{
+  --bg:#181b23;--fg:#f2ede3;--dim:#bdb4a4;--faint:#918878;
+  --line:#414757;--card:#232833;--max:#79cc86;--accent:#d9b96f;
+  --star:#ffd970;--best:#8ccdf5}
+*{box-sizing:border-box}
+h1{font-size:40px;font-weight:700;letter-spacing:-.02em;margin:0}
+.sub{color:var(--dim);font-size:24px;margin:2px 0 24px}
+
+article{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+header{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px}
+
+h3{font-size:24px;font-weight:600;margin:1px 0 2px;line-height:1.25}
+
+table{width:100%;border-collapse:collapse}
+td{padding:2.5px 0;font-size:22px}
+
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+h2{font-size:28px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin:0 0 10px;font-weight:600}
+section table td{font-size:22px;padding:2px 0}
+
+.note{margin-top:26px;padding:14px 16px;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:6px;color:var(--dim);font-size:22px}
+.dcell:hover{background:rgba(128,128,128,.09)}
+.dbox{flex:0 0 84px;height:84px;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,rgba(128,128,128,.10),rgba(128,128,128,.03));border:1px solid var(--line);border-radius:7px}
+.dcell.full .dbox{border-color:var(--max);box-shadow:0 0 0 1px var(--max) inset}
+.dbox img{max-width:78px;max-height:78px}
+.dcell.empty .dbox{opacity:.35;border-style:dashed}
+.dcell.empty span{color:var(--faint);font-size:20px}
+.dnone{width:78px;height:78px}
+
+.dcell span i{display:block;font-style:normal;font-size:20px;color:var(--faint);font-weight:400;margin-top:1px}
+
+tr.hd td{font-size:20px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:600;padding-bottom:3px;border-bottom:1px solid var(--line)}
+
+.dcell span{font-size:22px;line-height:1.25;font-weight:500;min-width:0;overflow-wrap:normal;word-break:normal;hyphens:none}
+.dcell{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;padding:5px;border-radius:8px;transition:background .12s;min-width:0}
+/* ---- paper doll ---------------------------------------------------------
+   Flex, not grid. Each column gets flex with min-width:0, which keeps the two
+   sides equal whatever the item names do. A grid of 1fr is minmax(auto,1fr) and
+   refuses to shrink below its widest content, so one long name widened that
+   side and pushed the panel off centre. */
+.doll{display:flex;align-items:stretch;gap:20px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:22px}
+.dcol:first-child{align-items:stretch}
+.dcol:last-child{align-items:stretch}
+.dcol:first-child .dcell{flex-direction:row;text-align:left}
+.dcol:last-child  .dcell{flex-direction:row;text-align:left}
+.dcol .dcell{width:100%;max-width:none}
+/* margin:0 auto, never margin:auto. An auto margin on a flex item beats
+   align-items, and margin:auto is auto on all four sides, so the top and bottom
+   autos re-centred this panel vertically however .dmid was set. */
+.figure{text-align:center;padding:20px 24px;width:100%;background:linear-gradient(180deg,rgba(128,128,128,.07),transparent);border:1px solid var(--line);border-radius:10px;margin:0 auto}
+
+.cbox{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 15px 14px}
+.cbox h4{margin:0 0 9px;font-size:20px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:600}
+.srow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:4px 0;border-bottom:1px solid var(--line)}
+.srow:last-child{border-bottom:0}
+.srow span{font-size:22px;color:var(--dim)}
+.srow b{font-size:26px;font-weight:600;font-family:"Libertinus Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+/* Resistances as the game lays them out: five across, two rows, icon over
+   value, with the amount over the cap in brackets. */
+.rgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px 6px}
+.rcell{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center}
+.rcell img{width:32px;height:32px;image-rendering:auto;display:block}
+
+.rcell b{font-size:24px;font-weight:600;font-family:"Libertinus Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;line-height:1.2}
+.rcell.capped b{color:var(--accent)}
+/* The three stat panels sit in a row beneath the character card. */
+.cstack{display:flex;align-items:stretch;gap:12px;width:100%}
+.cstack .cbox{flex:1 1 0;min-width:0}
+.cstack .cbox.res{flex:1.6 1 0}
+body{margin:0;padding:28px 32px 48px;background:var(--bg);color:var(--fg);font-family:"Libertinus Serif",Palatino,Georgia,serif;font-size:26px;line-height:1.55}
+.wrap{max-width:none;margin:0}
+/* Columns are capped near what a long name needs, and the centre takes the
+   surplus. Cells pack from the outer edge -- icon then name, mirrored right --
+   so extra column width lands as dead space between the names and the centre. */
+.dcol{flex:0 1 516px;min-width:0;display:flex;flex-direction:column;gap:10px}
+/* justify-content:flex-start, not center. This was a row once, where centring
+   was horizontal; as a column it centres vertically and pushed the panels below
+   the top of the item lists beside them. */
+.dmid{flex:1 1 900px;display:flex;align-items:stretch;justify-content:flex-start;flex-direction:column;gap:12px;min-width:0;max-width:1500px}
+.srow b i{font-style:normal;font-size:inherit;font-weight:inherit;color:inherit}
+.srow b i::before{content:""}
+.ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+/* top-aligned, not centred: a name that wraps makes the text block taller than
+   the icon, and centring then pushes the icon below the first line -- which is
+   what left "Summon Briarthorn" sitting above its icon. Aligned to the top,
+   the first line of every name starts level with its icon whether it wraps or
+   not. */
+.igc{display:flex;align-items:flex-start;gap:12px;min-width:0;padding:4px 2px}
+.igbox{flex:0 0 62px;height:62px;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,rgba(128,128,128,.10),rgba(128,128,128,.03));border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.igbox img{max-width:56px;max-height:56px;object-fit:contain;display:block}
+.ignone{width:56px;height:56px;display:block;opacity:.3}
+.igc span{font-size:22px;line-height:1.3;min-width:0;overflow-wrap:normal;word-break:normal}
+.igc span i{display:block;font-style:normal;font-size:20px;color:var(--faint);margin-top:1px}
+/* gear has pushed this skill as far as its ceiling allows and the rest is
+   wasted: the game prints that one in red. Being over the cap is ordinary
+   and takes no colour. */
+.igc span i.cap{color:#c0603a;font-weight:600}
+
+/* only the devotions live below the doll now; the masteries moved into the
+   middle column, under the buffs */
+.panels{display:grid;grid-template-columns:1fr;gap:16px;margin-top:28px}
+section.wide{grid-column:1/-1}
+/* ---- skills and devotions ----------------------------------------------
+   Listed rather than drawn as a tree: only what was taken, with the game's own
+   icon for each. The full tree geometry is still in tree.json (every node's
+   bitmapPositionX/Y from ui/skills/classNN/skillNN.dbr) if it is wanted back. */
+/* ---- hover detail -------------------------------------------------------
+   One panel, moved to the cursor, replacing a permanent stat block for every
+   item at once. pointer-events:none stops it swallowing the hover that
+   summoned it. */
+#tip{position:fixed;z-index:50;pointer-events:none;opacity:0;visibility:hidden;max-width:340px;background:var(--card);border:1px solid var(--rule2,var(--line));border-radius:9px;padding:11px 13px;box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:22px;line-height:1.45}
+#tip.on{opacity:1;visibility:visible}
+#tip h5{margin:0 0 2px;font-size:24px;font-weight:600;line-height:1.25}
+#tip .tm{font-size:20px;color:var(--dim);font-family:"Libertinus Mono",ui-monospace,monospace;margin-bottom:7px}
+#tip .tm em{font-style:normal;color:#c0603a}
+#tip table{width:100%;border-collapse:collapse}
+#tip td{padding:1.5px 0;font-size:22px;vertical-align:baseline}
+#tip td.v{text-align:right;padding-left:12px;font-family:"Libertinus Mono",ui-monospace,monospace;font-weight:600;white-space:nowrap}
+
+/* label and value are two columns, not a fixed-width inline-block: a label
+   longer than the old 78px wrapped under itself and the value landed on top */
+#tip .tx{display:flex;justify-content:space-between;align-items:baseline;gap:20px;
+  margin-top:5px;font-size:22px;color:var(--dim)}
+#tip .tx i{font-style:normal;font-size:20px;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--faint);line-height:1.2}
+#tip .tx{font-variant-numeric:tabular-nums}
+[data-tip]{cursor:default}
+
+/* ---- responsive and theme ----------------------------------------------
+   These now sit after every base rule, so they can actually win. Several base
+   rules used to be declared below them and silently defeated them at narrow
+   widths. */
+
+@media(max-width:820px){
+
+}
+
+@media(max-width:900px){
+  .panels{grid-template-columns:1fr}
+  .doll{flex-wrap:wrap}
+  .dmid{flex:1 1 100%;order:-1;margin-bottom:6px}
+  .dcol{flex:1 1 45%}
+}
+
+@media(max-width:1500px){
+  .dmid{flex:0 0 620px}
+  .cstack{flex-wrap:wrap}
+  .cstack .cbox{flex:1 1 46%}
+  .cstack .cbox.res{flex:1 1 100%}
+  .dcol{flex:1 1 45%}
+  .dmid{flex:0 0 620px;max-width:100%}
+}
+
+/* a skill pushed past its own cap by gear, as the game prints it */
+
+/* ---- constellations ----------------------------------------------------
+   Shown as the star pattern rather than as a glyph. The game lets you zoom its
+   devotion screen for the same reason: at thumbnail size these read as smudges,
+   and the shape is the whole point of a constellation. */
+.cstg{display:grid;gap:12px}
+.cst{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;min-width:0;
+  border:1px solid var(--line);border-radius:9px;background:var(--card)}
+.cart{height:172px;width:100%;display:flex;align-items:center;justify-content:center}
+.cart img{max-height:172px;max-width:100%;object-fit:contain;display:block}
+.cst span{font-size:26px;font-weight:600;text-align:center;line-height:1.3}
+.cst span i{display:block;font-style:normal;font-size:24px;font-weight:400;color:var(--fg);margin-top:3px;font-family:"Libertinus Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+/* and full size in the hover, which is where the detail actually lives */
+
+/* a completed constellation is what grants its affinity, so it is worth marking */
+.cst.done{border-color:rgba(201,169,97,.45)}
+.cst span em{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:8px;row-gap:3px;align-items:center;font-style:normal;font-size:24px;font-weight:600;color:var(--star);margin-top:7px;padding-top:7px;border-top:1px solid var(--line);width:100%;text-align:left}
+/* the affinity totals, as the game's panel beside the devotion map */
+.affs{display:flex;flex-wrap:wrap;gap:20px;margin-bottom:12px;padding-bottom:11px;
+  border-bottom:1px solid var(--line)}
+.afc{display:flex;align-items:center;gap:6px}
+.afd{width:14px;height:14px;border-radius:50%;display:block;flex:none}
+.afc b{font-family:"Libertinus Mono",ui-monospace,monospace;font-size:28px;font-weight:600;
+  font-variant-numeric:tabular-nums}
+.afn{font-size:24px;color:var(--dim)}
+
+/* stars plotted on the constellation art. The wrapper is sized to the image so
+   percentage offsets land where the game puts them. */
+.plot{position:relative;display:block}
+.plot img{width:100%;height:100%;display:block}
+.dot{position:absolute;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;
+  background:rgba(190,190,200,.30);box-shadow:0 0 0 1px rgba(0,0,0,.5)}
+/* a star actually taken, and the skill star the constellation pays out at the end */
+.dot.on{background:var(--star);box-shadow:0 0 5px 1px rgba(255,205,90,.75),0 0 0 1px rgba(90,60,0,.6)}
+.dot.sk{width:8px;height:8px;margin:-4px 0 0 -4px}
+.dot.sk.on{background:#ffe9a8;box-shadow:0 0 8px 2px rgba(255,220,130,.85),0 0 0 1px rgba(90,60,0,.7)}
+
+/* the skill a constellation grants, shown with its own icon under the name */
+.cst span em img{grid-column:1;grid-row:2;width:34px;height:34px;object-fit:contain;display:block;border:1px solid var(--line);border-radius:5px;background:linear-gradient(160deg,rgba(128,128,128,.10),rgba(128,128,128,.03))}
+/* a block-level <s> inside an inline <u> escapes the inline flow and lines up
+   with the flex line instead of with the name above it, which is why the bound
+   skill sat under the icon rather than under the proc it belongs to */
+.cst span em u{grid-column:1 / -1;grid-row:1;text-decoration:none;line-height:1.25;min-width:0}
+
+/* the class skill a devotion proc is bound to, under the proc's own name */
+/* both text lines occupy column two, so they share a left edge whatever their width */
+.cst span em s{grid-column:2;grid-row:2;text-decoration:none;font-size:22px;font-weight:400;color:var(--dim);line-height:1.25;min-width:0}
+
+/* ---- backdrop -----------------------------------------------------------
+   Our own backdrop rather than the game's art: a cold aurora over dark ground,
+   drawn entirely in CSS. It costs nothing to ship, it is ours to give away, and
+   it keeps Crate's artwork out of a file that travels. Two fixed layers so the
+   wash can be tuned without touching the colour beneath it. */
+body{position:relative;min-height:100vh}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;
+  background:
+    radial-gradient(120% 80% at 18% -10%, rgba(92,132,168,.34) 0%, rgba(92,132,168,0) 60%),
+    radial-gradient(90% 70% at 88% 4%, rgba(120,92,168,.26) 0%, rgba(120,92,168,0) 62%),
+    radial-gradient(140% 90% at 50% 110%, rgba(38,48,64,.85) 0%, rgba(24,27,35,0) 55%),
+    linear-gradient(180deg, #1d2230 0%, #181b23 48%, #14171e 100%);
+}
+/* a wash over it, so nothing behind competes with the text */
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;
+  background:linear-gradient(180deg,rgba(24,27,35,.22) 0%,rgba(24,27,35,.45) 40%,rgba(24,27,35,.72) 100%);
+}
+/* panels sit above the wash and carry their own ground */
+.doll,section,.note{position:relative;background:var(--card)}
+.cbox,.cst{background:#2a303d}
+.doll,section,.note{box-shadow:0 2px 18px rgba(0,0,0,.55)}
+
+/* ---- the header line the game shows ------------------------------------
+   Difficulty at the left, game version at the right, as on the character screen. */
+.topline{display:flex;justify-content:space-between;align-items:center;gap:24px;
+  flex-wrap:wrap;margin:0 0 6px;font-family:Jura,"Libertinus Serif",serif;
+  font-size:24px;letter-spacing:.06em;text-transform:uppercase}
+.topline b{font-weight:700;color:var(--accent)}
+.topline span{color:var(--dim)}
+.topline i{font-style:normal;color:var(--faint);font-family:"Libertinus Mono",monospace;
+  text-transform:none;letter-spacing:0}
+/* small-caps labels take the game's display face */
+h2,h4,.afn{font-family:Jura,"Libertinus Serif",serif}
+h1{font-family:"Libertinus Serif",Palatino,Georgia,serif;letter-spacing:0}
+
+/* ---- keep rows on the same baselines -----------------------------------
+   A name that wraps to two lines pushed everything under it down, so the star
+   counts and granted-skill icons stepped out of line across a row. Reserving
+   two lines for every name puts them all back on the same rows, whether the
+   name wraps or not. */
+/* no reserved height here: forcing two lines made a one-line name centre
+   lower than a two-line one, which is what left "Summon Briarthorn" sitting
+   above its icon while its neighbours sat level with theirs */
+.igc > span > b{display:block;font-weight:inherit}
+
+/* ---- constellation tile order -------------------------------------------
+   Name, artwork, star count, then the granted skill on its own full-width row.
+   Two lines are reserved for the name so the artwork starts at the same height
+   in every tile whether the name wraps or not. */
+.cname{display:flex;align-items:center;justify-content:center;text-align:center;
+  min-height:2.5em;font-size:24px;font-weight:600;line-height:1.25;width:100%}
+.cst span{width:100%}
+
+/* ---- the lines joining a constellation's stars -------------------------
+   From devotionLinksN on the constellation record, which names the button each
+   button joins to. Drawn under the dots, in the same percentage space, with
+   preserveAspectRatio="none" so they stretch with the artwork exactly as the
+   dots do. */
+.clink{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;
+  overflow:visible;vector-effect:non-scaling-stroke}
+.clink line{stroke:rgba(180,190,215,.28);stroke-width:.6;vector-effect:non-scaling-stroke}
+.clink line.on{stroke:rgba(255,214,120,.65);stroke-width:.9}
+
+/* ---- buffs --------------------------------------------------------------
+   Grouped as the game groups them: permanent, activated, triggered. The ones
+   actually running are marked; the rest are things the character can do, which
+   is why the game shows them unchecked rather than hiding them. */
+.bgrps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.bgrp h5{margin:0 0 7px;font-family:Jura,"Libertinus Serif",serif;font-size:18px;
+  font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
+.bf{display:flex;align-items:center;gap:10px;padding:3px 0;min-width:0}
+.bf img{width:34px;height:34px;object-fit:contain;flex:none;border:1px solid var(--line);
+  border-radius:5px;background:linear-gradient(160deg,rgba(128,128,128,.10),rgba(128,128,128,.03));
+  opacity:.45}
+.bf.on img{opacity:1;border-color:var(--accent)}
+.bf span{min-width:0;line-height:1.2}
+.bf b{display:block;font-size:20px;font-weight:400;color:var(--faint)}
+.bf.on b{color:var(--fg);font-weight:600}
+.bf i{display:block;font-style:normal;font-size:15px;color:var(--faint)}
+
+/* ---- compact tiles ------------------------------------------------------
+   A summary square that opens its detail on hover, the way the game reduces
+   its buff list to a single button. The row is a flex wrap so more tiles can
+   sit beside this one later. */
+/* its own size, centred in the space Combat Stats gave back */
+.tiles{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+.tile{background:#2a303d;border:1px solid var(--line);border-radius:10px;
+  padding:12px 18px;display:flex;flex-direction:column;gap:2px;min-width:150px}
+.tile b{font-family:Jura,"Libertinus Serif",serif;font-size:18px;font-weight:600;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
+.tile span{font-family:"Libertinus Mono",monospace;font-size:26px;font-weight:600;
+  color:var(--fg);font-variant-numeric:tabular-nums;line-height:1.15}
+.tile span em{font-style:normal;font-size:20px;color:var(--faint);font-weight:400}
+
+/* the hover panel grows for content that declares itself wide */
+#tip.wide{max-width:min(1000px,92vw)}
+#tip .bufftip{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:18px;align-items:start}
+
+/* the resistance hover, in the game's own arrangement: value beside the name,
+   the overcap after it, and the description beneath */
+#tip h5 s{text-decoration:none;color:var(--best);font-family:"Libertinus Mono",monospace}
+#tip h5 u{text-decoration:none;color:var(--dim);font-weight:400;font-size:20px}
+#tip .rdesc{margin-top:5px;font-size:20px;color:var(--fg);line-height:1.4}
+
+/* the armour hover's three columns, as the game lays them out */
+#tip .artab{width:100%;margin-top:9px;border-collapse:collapse}
+#tip .artab td{padding:3px 0;font-size:18px;white-space:nowrap}
+#tip .artab td.v{text-align:right;padding-left:22px;
+  font-family:"Libertinus Mono",monospace;font-variant-numeric:tabular-nums}
+/* the header cells need the same alignment and gutter as the values beneath
+   them, or the three titles run together into one string */
+#tip .artab tr.hd td{font-family:Jura,"Libertinus Serif",serif;font-size:15px;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--faint);
+  border-bottom:1px solid var(--line);padding-bottom:5px;
+  text-align:right;padding-left:22px}
+#tip .artab tr.hd td:first-child{text-align:left;padding-left:0}
+/* a panel holding a table sizes to the table rather than to the prose width */
+#tip.wide .rdesc,#tip.wide h5{max-width:520px}
+
+/* ---- item panel: the game's own grouping ------------------------------- */
+/* Values arrive marked by gd-edit's summary, so the numbers carry the accent
+   and the words stay plain, the way the game writes them. */
+#tip .gl{font-size:18px;line-height:1.42;color:var(--fg)}
+#tip .gl b{font-weight:600;color:var(--best)}
+#tip .gsp{height:7px}
+#tip .grp{margin-top:11px;padding-top:9px;border-top:1px solid var(--line)}
+#tip .grp.item{margin-top:8px;padding-top:0;border-top:0}
+#tip .gh{font-family:Jura,"Libertinus Serif",serif;font-size:15px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--faint);margin-bottom:5px}
+#tip .gh.component{color:#7fb069}
+#tip .gh.augment{color:#c08a3e}
+#tip .gh.ascended{color:#b06ec0}
+#tip .gh.set{color:#4a9c4a}
+#tip .gh.bonus{color:#5f9ec0}
+/* set pieces: the ones actually worn read as present, the rest as absent */
+#tip .gmem{display:flex;flex-wrap:wrap;gap:3px 14px;margin-bottom:7px;font-size:18px}
+#tip .gmem span.u{color:var(--faint)}
+#tip .gmem span.w{color:var(--fg)}
+#tip .gmem span.me{font-weight:600;color:var(--best)}
+#tip .greq{margin-top:11px;padding-top:9px;border-top:1px solid var(--line)}
+#tip .greq .gl{font-size:18px;color:var(--dim)}
+#tip .greq .gl b{color:var(--dim);font-weight:400}
+/* A legendary with nested granted skills runs to seventy lines. One readable
+   measure, and when that would be taller than the window it flows into columns
+   rather than running off the bottom -- a tooltip cannot be scrolled. */
+#tip .itip{width:430px}
+/* width and column count are set inline from the measured height; a multicol
+   box does not grow to its columns, so it must be told how wide to be */
+#tip.cols .itip{column-gap:30px;column-fill:balance}
+#tip.cols{max-width:none}
+#tip .grp,#tip .greq,#tip .gmem{break-inside:avoid}
+#tip .gsub{font-size:18px;color:var(--faint);margin:-3px 0 6px}
+/* the component fitted to a piece, badged in the corner of its icon the way the
+   game's own inventory marks it */
+.dbox{position:relative}
+.dbox img.cbadge{position:absolute;right:2px;bottom:2px;width:26px;height:26px;
+  max-width:26px;max-height:26px;border-radius:3px;
+  filter:drop-shadow(0 0 2px rgba(0,0,0,.9))}
+
+/* ---- portrait ---------------------------------------------------------- */
+/* The character's own screenshot, beside the second column of gear. Dropped in
+   by the reader and kept in their browser, or baked in by the generator. */
+.dart{flex:0 1 580px;min-width:0;margin:0;position:relative;display:flex;
+  border:1px solid var(--line);border-radius:9px;background:var(--card);
+  overflow:hidden;cursor:pointer}
+.dart.baked{cursor:default}
+.dart.turnable{cursor:ew-resize}
+.dart.over{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.dart.bad{border-color:#c0603a;box-shadow:0 0 0 1px #c0603a inset}
+/* every frame decoded once and stacked; turning only changes which is shown,
+   so there is no decode on the swap to make it hitch */
+.pstack{position:absolute;inset:0}
+.pstack img,.dart>img{position:absolute;inset:0;width:100%;height:100%;
+  object-fit:contain;object-position:center;display:none}
+.pstack img.on,.dart>img{display:block}
+.pdrop{position:absolute;inset:8px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:9px;text-align:center;padding:16px;
+  border:2px dashed var(--line);border-radius:8px;pointer-events:none}
+.dart.has .pdrop{display:none}
+.pdrop span{font-family:Jura,"Libertinus Serif",serif;font-size:22px;font-weight:600;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
+.pdrop i{font-style:normal;font-size:18px;color:var(--faint);line-height:1.6}
+.pdrop em{font-style:normal;color:var(--dim)}
+.dart.bad .pdrop i{color:#c0603a}
+/* the frame count sits at the top, out of the way of the controls */
+.pcap{position:absolute;left:0;right:0;top:0;padding:7px 8px;text-align:center;
+  font-family:"Libertinus Mono",ui-monospace,monospace;font-size:17px;color:var(--dim);
+  background:linear-gradient(rgba(0,0,0,.72),transparent);pointer-events:none}
+.pcap:empty{display:none}
+/* rotate, step one, stop -- the game turns a character a step at a time too */
+.pbar{position:absolute;left:0;right:0;bottom:0;display:none;justify-content:center;
+  gap:10px;padding:10px;background:linear-gradient(transparent,rgba(0,0,0,.78))}
+.dart.turnable .pbar{display:flex}
+.pb{width:44px;height:38px;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--line);border-radius:7px;background:rgba(0,0,0,.6);
+  color:var(--dim);font-size:19px;line-height:1;cursor:pointer;padding:0}
+.pb:hover{color:var(--fg);border-color:var(--dim);background:rgba(0,0,0,.8)}
+.dart.spinning .pb[data-act="play"]{color:var(--accent);border-color:var(--accent)}
+/* only offered once there is something to remove, and never on a baked-in one */
+.pclear{position:absolute;top:7px;right:7px;width:28px;height:28px;display:none;
+  align-items:center;justify-content:center;border:1px solid var(--line);
+  border-radius:6px;background:rgba(0,0,0,.55);color:var(--dim);font-size:20px;
+  line-height:1;cursor:pointer;padding:0}
+.dart.has:not(.baked) .pclear{display:flex}
+.pclear:hover{color:var(--fg);border-color:var(--dim)}
+
+/* ---- legend ------------------------------------------------------------ */
+/* Below the devotions, where there is room to say what each mark means rather
+   than abbreviate it. */
+.note{margin-top:22px;padding:16px 20px 18px;background:var(--card);
+  border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;
+  color:var(--dim);font-size:20px}
+/* the heading runs into the sentence rather than sitting above it */
+.note .h3{font-family:Jura,"Libertinus Serif",serif;font-size:24px;font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase;color:var(--accent);margin-right:12px}
+.note .lead{margin-bottom:15px}
+.note p{margin:0 0 14px}
+.note b{color:var(--fg);font-weight:600}
+.legend .ndps{grid-column:1/-1;margin-top:5px;padding-top:12px;border-top:1px solid var(--line)}
+/* the two marks share a line; the DPS note runs under both */
+.legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 30px;margin:0}
+@media (max-width:1100px){.legend{grid-template-columns:1fr}}
+.lgi{display:flex;align-items:flex-start;gap:13px}
+/* a fixed column, so a row with no mark still lines its text up with the rest */
+.lgk{flex:0 0 22px;display:flex;align-items:center;min-height:24px}
+.lgv{font-size:19px;line-height:1.45}
+/* the legend's own marks: a gear cell, its green outline, and a component
+   badge in the corner -- the same shapes the paper doll uses */
+.lg-cell{position:relative;display:inline-block;width:44px;height:44px}
+.lg-box{position:absolute;inset:0;border:1px solid var(--line);border-radius:7px;
+  background:linear-gradient(160deg,rgba(128,128,128,.10),rgba(128,128,128,.03))}
+.lg-cell.full .lg-box{border-color:var(--max);box-shadow:0 0 0 1px var(--max) inset}
+.lg-cell.sm{width:22px;height:22px}
+/* ties the Combat Stats heading to the DPS note in the legend */
+.ast{color:var(--accent);font-weight:600;margin-left:3px}
+/* as big as the boxes it sits under, and optically centred in the same column
+   -- an asterisk sits high in its own line box, so it needs pulling down */
+.lgk .ast{margin:0;width:22px;height:22px;display:flex;align-items:center;
+  justify-content:center;font-size:34px;line-height:0;padding-top:10px}
+
+/* ---- skill and constellation panels ------------------------------------ */
+#tip h5.skn{color:#5f9ec0}
+/* each rank, and each section of a constellation, reads as its own block */
+#tip .lvb{margin-top:11px}
+#tip .lvh{font-size:20px;color:var(--fg);margin-bottom:3px}
+#tip .lvh s{text-decoration:none;font-family:"Libertinus Mono",ui-monospace,monospace}
+#tip .lvh u{text-decoration:none;color:#5f9ec0}
+/* the next rank is what a point would buy, not what is owned: it reads back */
+#tip .lvb.next .lvh,#tip .lvb.next .gl{color:var(--faint)}
+#tip .lvb.next .gl b{color:var(--dim)}
+#tip .lvb.cel{border-top:1px solid var(--line);padding-top:9px}
+#tip .celn{font-size:20px;color:#5f9ec0;margin:0 0 4px 14px}
+#tip .celn i{font-style:normal;color:var(--dim);font-size:18px}
+#tip .afr{display:flex;align-items:center;gap:9px;font-size:20px}
+#tip .afr .afd{flex:0 0 auto}
+#tip .afr i{font-style:normal;color:var(--dim)}
+#tip .afr b{color:var(--fg);font-family:"Libertinus Mono",ui-monospace,monospace;min-width:20px}
+/* stop/start the turn; only worth showing when there is more than one frame */
+.pturn{position:absolute;top:7px;left:7px;width:28px;height:28px;display:none;
+  align-items:center;justify-content:center;border:1px solid var(--line);
+  border-radius:6px;background:rgba(0,0,0,.55);color:var(--dim);font-size:13px;
+  line-height:1;cursor:pointer;padding:0}
+.dart.turnable .pturn{display:flex}
+.pturn:hover{color:var(--fg);border-color:var(--dim)}
+.dart.spinning .pturn{color:var(--accent);border-color:var(--accent)}
+
+/* Combat Stats carries three rows against Attributes' five, so it need not be
+   stretched to the height of the row. It sizes to its content and the buffs
+   take the space underneath. */
+.cmid{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:12px}
+.cmid .cbox{flex:0 0 auto}
+/* the two masteries stacked, not side by side */
+.mstack{display:flex;flex-direction:column;gap:12px}
+.mstack section{padding:13px 15px}

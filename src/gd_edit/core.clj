@@ -25,6 +25,7 @@
              [update :as commands.update]
              [resists :as commands.resists]
              [export :as commands.export]
+             [sheet :as commands.sheet]
              [write :as commands.write]
              [batch :as commands.batch]
              [remove :as commands.remove]
@@ -108,6 +109,7 @@
    ["write" "character-list"] (fn [input] (commands.write/write-character-list input))
    ["write" "character-csv"] (fn [input] (commands.export/export-csv-handler input))
    ["write" "character-json"] (fn [input] (commands.export/export-json-handler input))
+   ["write" "character-sheet"] (fn [input] (commands.sheet/write-sheet-handler input))
    ["class"] (fn [input] (commands.class/class-handler input))
    ["class" "list"] (fn [input] (commands.class/class-list-handler input))
    ["class" "add"]  (fn [input] (commands.class/class-add-handler input))

@@ -471,6 +471,46 @@ needs no copy of the game files. That is the point: the game database is 173MB o
 Crate's data that a website cannot ship and you cannot reasonably upload, while this
 file is a few tens of kilobytes of your own save with the numbers already worked out.
 
+### write character-sheet
+
+The character as the game shows it, as a web page.
+
+```
+write character-sheet ~/Desktop/mary.html
+write character-sheet "C:\Users\You\Desktop\My Sheet.html"
+write character-sheet ~/Desktop/            a directory: the character names the file
+```
+
+Equipment with its full tooltips, attributes and combat stats, resistances, every
+skill at the level it actually reaches, the devotion map, and the buffs that are
+running. Hover anything on the page for the detail behind it — an item's complete
+stat block, where a combat figure comes from, what a skill does at its current rank.
+
+The page is **one file and needs nothing else**: no game, no gd-edit, no internet.
+Every picture is embedded in it and nothing is ever fetched, so a browser needs
+nothing turned on, and the file can be kept, opened years later, or sent to someone
+who has neither gd-edit nor Grim Dawn.
+
+The same figures the rest of gd-edit computes go onto the page, so it agrees with
+`show`, `resists` and the item summaries — the save stores seeds rather than stats,
+and these are the values resolved against your own game database.
+
+That artwork is Crate's, read out of your own install at the moment the sheet is
+written. It is why gd-edit ships no sheets of its own, and worth a thought before
+posting one publicly.
+
+**The picture.** The panel beside the gear takes a character screenshot. Drag one
+onto it in the browser and it stays in that browser, against that character. Name a
+picture on the command line instead and it is written into the file itself, which is
+what a page meant to be sent somewhere wants:
+
+```
+write character-sheet ~/Desktop/mary.html ~/Desktop/screenshot.png
+```
+
+PNG, JPEG or WebP. Drop several shots taken a rotation step apart — the game's own
+arrow turns the character — and the panel turns with them.
+
 ---
 
 ## Resistances
