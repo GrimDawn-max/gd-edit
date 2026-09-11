@@ -484,3 +484,41 @@ h1{font-family:"Libertinus Serif",Palatino,Georgia,serif;letter-spacing:0}
 /* the two masteries stacked, not side by side */
 .mstack{display:flex;flex-direction:column;gap:12px}
 .mstack section{padding:13px 15px}
+
+/* ------------------------------------------------------------- no artwork
+   Written with --no-art: a sheet with none of the game's pictures in it, so it
+   can be posted somewhere public without redistributing Crate's work.
+
+   Every figure and every tooltip is still here -- what is gone is the icons and
+   the constellation artwork. The renderer leaves its usual placeholders, and
+   the job here is to close the gaps up so the page reads as a typeset document
+   rather than a grid of empty boxes. */
+
+/* an item keeps a rule where its icon was, because that rule is what says the
+   item rolled everything at maximum -- the one mark the legend still needs */
+.noart .dnone{display:none}
+.noart .dbox{flex:0 0 7px;height:58px;border-radius:4px;
+  background:linear-gradient(180deg,rgba(128,128,128,.22),rgba(128,128,128,.07));
+  border:1px solid var(--line)}
+.noart .dcell.full .dbox{background:var(--max);border-color:var(--max)}
+.noart .dcell.empty .dbox{opacity:.3}
+.noart .dcell{gap:13px}
+
+/* a skill's icon carries nothing the name does not, so its box simply goes */
+.noart .igbox{display:none}
+.noart .igc{gap:0}
+
+/* the constellation artwork, and with it the plotted stars. The name, the star
+   count and the skill each one grants are text and stay exactly as they were */
+.noart .cart{display:none}
+.noart .cst{padding:11px 10px;gap:3px}
+.noart .cst span em img{display:none}
+.noart .cst span em s{grid-column:1 / -1;grid-row:2}
+.noart .cst span em u{grid-row:1}
+
+/* resistance and buff rows lose their icon and close up behind it. The buff
+   rows live inside a tooltip, which is why this has to be a blanket rule rather
+   than one per container: #tip sits inside the wrap, so it inherits .noart */
+.rno{display:none}
+.noart .ignone{display:none}
+.noart .bf{gap:0}

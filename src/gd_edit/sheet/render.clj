@@ -82,30 +82,38 @@
   "Everything the page needs, as one value.
 
   Gathering the art is the slow part -- each archive is walked once -- so it is
-  done here, alongside the character, rather than per section."
-  [character & {:keys [portrait]}]
+  done here, alongside the character, rather than per section.
+
+  With `art?` false none of it is read, and the page is written without a single
+  one of Crate's pictures in it. Every figure, every tooltip and the whole
+  layout survive; what goes is the icons, the constellation artwork and, with
+  it, the star plot, which is drawn against the artwork's own coordinates. The
+  renderer already falls back wherever a picture is missing, so this asks for
+  nothing of it beyond leaving the maps empty."
+  [character & {:keys [portrait art?] :or {art? true}}]
   (let [sheet (data/character-data character)
         tree (data/tree-data character)
         devo (data/devotion-data character)
         buffs (data/buff-data character)
-        {:keys [icons compicons]} (art/item-art character)]
+        {:keys [icons compicons]} (if art? (art/item-art character) {})]
     {:sheet sheet
      :tree tree
      :devo devo
      :buffs buffs
-     :icons icons
+     :art art?
+     :icons (or icons {})
      ;; the prototype looked an icon up through a second map; the names are the
      ;; keys now, so the indirection is gone and this stays for the renderer
      :namemap (zipmap (keys icons) (keys icons))
-     :compicons compicons
-     :treeicons (art/tree-art tree devo buffs)
-     :resicons (art/resistance-art)
+     :compicons (or compicons {})
+     :treeicons (if art? (art/tree-art tree devo buffs) {})
+     :resicons (if art? (art/resistance-art) {})
      :portrait (or (portrait-img portrait) "")}))
 
 (defn page
   "The finished HTML."
-  [character & {:keys [portrait]}]
-  (let [d (sheet-data character :portrait portrait)
+  [character & {:keys [portrait art?] :or {art? true}}]
+  (let [d (sheet-data character :portrait portrait :art? art?)
         nm (get-in d [:sheet :character :name])]
     (str "<!doctype html>\n<meta charset=\"utf-8\">\n"
          "<title>" (escape nm) " — Character Sheet</title>\n"
@@ -117,14 +125,14 @@
 
 (defn write!
   "Write `character`'s sheet to `path`. Returns the file."
-  [character path & {:keys [portrait]}]
+  [character path & {:keys [portrait art?] :or {art? true}}]
   (let [f (io/file path)
         ;; a directory means "put it here", and the character names the file
         f (if (or (.isDirectory f) (str/ends-with? (str path) java.io.File/separator))
             (io/file f (str (get-in (data/character-data character) [:character :name])
                             "-sheet.html"))
             f)
-        html (page character :portrait portrait)]
+        html (page character :portrait portrait :art? art?)]
     (io/make-parents f)
     (spit f html)
     f))

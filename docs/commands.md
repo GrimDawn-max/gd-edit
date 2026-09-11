@@ -499,6 +499,23 @@ That artwork is Crate's, read out of your own install at the moment the sheet is
 written. It is why gd-edit ships no sheets of its own, and worth a thought before
 posting one publicly.
 
+**A sheet with no artwork.** `--no-art` writes the page without a single one of the
+game's pictures in it:
+
+```
+write character-sheet ~/Desktop/mary.html --no-art
+```
+
+Every figure and every tooltip stays exactly as it was. What goes is the icons and
+the constellation artwork — and with the artwork, the plotted stars, since they are
+drawn against its own coordinates; each constellation keeps its name, its star count
+and the skill it grants, as text. The result is about a tenth the size and takes a
+second rather than several, because no archive has to be opened at all.
+
+That is the one to post somewhere public: there is nothing of Crate's artwork in it.
+The wording is still theirs — item names, stat phrasing, skill descriptions all come
+out of their database — so it is a smaller thing to think about, not nothing.
+
 **The picture.** The panel beside the gear takes a character screenshot. Drag one
 onto it in the browser and it stays in that browser, against that character. Name a
 picture on the command line instead and it is written into the file itself, which is
