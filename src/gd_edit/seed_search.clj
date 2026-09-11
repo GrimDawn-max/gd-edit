@@ -313,7 +313,10 @@
         {:keys [model base spread base2 spread2 jitter]} entry]
     (cond
       (== (long model) MODEL-CONV)
-      [(converted 0 base jitter) (converted MINSTD-M base jitter)]
+      ;; the only model whose endpoints are not whole numbers, and the only one
+      ;; that carries the engine's deliberate 32-bit narrowing out to the caller
+      [(item-stats/display-round (converted 0 base jitter))
+       (item-stats/display-round (converted MINSTD-M base jitter))]
 
       (== (long model) MODEL-PAIRMAX)
       [(trunc (+ (scaled-value (- base spread) scale) (max 0.0 (- base2 spread2))))

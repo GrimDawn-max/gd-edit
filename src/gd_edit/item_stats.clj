@@ -163,6 +163,22 @@
           v (+ (- (double (rem draw modulus)) spread) base)]
       (if (< (Math/abs v) 1.0) base v))))
 
+(defn display-round
+  "Round a range endpoint to something fit to print.
+
+  A conversion's range is worked out multiplicatively, and the engine narrows
+  the factor to a 32-bit float on purpose -- that narrowing is what makes a
+  rolled value match the game. It also leaves an error of that size behind, so
+  a base of 30 at the bottom of its jitter comes out 24.00000035762787 rather
+  than 24. Harmless inside the engine; in a tooltip it reads as
+  [24.00000035762787-36.000001430511475].
+
+  Four decimal places is far finer than anything the database distinguishes and
+  far coarser than the error, so it removes the noise and leaves a genuinely
+  fractional range alone."
+  ^double [^double x]
+  (/ (Math/rint (* x 10000.0)) 10000.0))
+
 (defn- rolled-range
   "The [low high] a field can roll to, given its base and the record's jitter.
 
@@ -173,8 +189,8 @@
   [field ^double base ^double jitter]
   (if (re-find #"(?i)^conversionPercentage" (str field))
     (let [j (* jitter 0.01)]
-      [(max 0.0 (* base (- 1.0 j)))
-       (min 100.0 (* base (+ 1.0 j)))])
+      [(display-round (max 0.0 (* base (- 1.0 j))))
+       (display-round (min 100.0 (* base (+ 1.0 j))))])
     (let [spread (let [x (long (* base jitter 0.01))] (if (zero? x) 1 x))]
       [(- base spread) (+ base spread)])))
 
