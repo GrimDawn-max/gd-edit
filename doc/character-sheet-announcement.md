@@ -32,6 +32,24 @@ number only exists once you combine them, which is what the game does every time
 it loads your character. gd-edit does the same work, so the sheet shows your
 actual rolls rather than what an item can roll.
 
+### Making one
+
+Load a character in gd-edit and give it somewhere to write:
+
+```
+write character-sheet ~/Desktop/mary.html
+write character-sheet "C:\Users\You\Desktop\My Sheet.html"
+write character-sheet ~/Desktop/            a folder: the character names the file
+```
+
+A picture named after the path is written into the file itself:
+
+```
+write character-sheet ~/Desktop/mary.html ~/Desktop/screenshot.png
+```
+
+`help write character-sheet` has the rest.
+
 ### What you need
 
 - Grim Dawn installed — the sheet reads the item database, icons and textures
@@ -53,9 +71,9 @@ actual rolls rather than what an item can roll.
 
 The file is self-contained, so you can send it to anyone: they need no copy of
 Grim Dawn, no gd-edit and no internet connection. Everything works for them
-exactly as it does for you — every tooltip, every hover, the lot. The one thing
-that does not travel is the portrait, which lives in the browser you dropped it
-into rather than in the file.
+exactly as it does for you — every tooltip, every hover, the lot. A portrait you
+dragged on stays in your browser rather than in the file, so for a page you mean
+to send, name the picture on the command line and it is written in.
 
 It fetches nothing. There is no network code in it at all — no downloads, no
 calls out, nothing to a server. You can confirm that by opening it in a text
@@ -63,29 +81,13 @@ editor.
 
 ---
 
-## Before this can be posted
+## Notes to myself, not for the post
 
-**There is no command for it yet.** The sheet is currently built by a pipeline of
-six Clojure scripts and a Python renderer, run from the gd-edit source tree — see
-`webviewer/README.md`. A reader of the post would have a packaged jar and none of
-that, so the post promises something they cannot do.
+The sheet carries Crate's artwork, read out of the player's own install. That is
+fine on their own machine and is why gd-edit ships no sheets of its own: none of
+that art is in the repository or the release, and each page is built from the
+player's game folder at the moment they ask for it. Worth keeping in mind before
+posting a page publicly, as against sending one to someone.
 
-The export commands that do exist are `write character-csv` and
-`write character-json`; neither produces the page.
-
-Two ways to close it:
-
-- **Port the renderer into gd-edit** and add one command, say
-  `write character-sheet <path>`, that writes the HTML directly. That makes the
-  post true as written, and it also fixes the speed: the pipeline currently loads
-  the game database six times over, once per script, which is why a sheet takes
-  about seven minutes. In one process it would be well under one. The work is
-  porting `render.py` — roughly 800 lines of Python that assemble the markup —
-  into Clojure. Mechanical rather than difficult, but not small.
-- **Export the data only**, say `write sheet-data <path>`, bundling everything
-  the viewer needs into one JSON in a single database load, and leave the
-  rendering to `render.py`. Much less work and it fixes the speed too, but the
-  reader still needs Python, which is a poor ask on Windows.
-
-Until one of those exists, the honest version of the post describes it as
-something built from source rather than a feature of the release.
+The figures have been checked against the game on MaxFluffy, ColdFluffy and
+RedPriest — attributes, combat stats and all ten resistances.
