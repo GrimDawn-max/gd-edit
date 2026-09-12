@@ -96,6 +96,22 @@ the point of it. The game database is Crate's, and it is far too large to ship o
 upload, while this file is a few tens of kilobytes of your own save with the numbers
 already worked out.
 
+### Item tooltips
+
+A pass over what an item's description was leaving out, most of it found by
+asking, for every field on every one of the game's 12,557 item records, whether
+gd-edit could put it into words:
+
+- A weapon now states its speed, and an item says when it is Soulbound
+- A shield's block reads as the game reads it -- "34% Chance to block 975
+  damage", with the recovery beneath it -- rather than as a resistance
+- An item that modifies a skill shows what the modifier does, grouped under the
+  skill it changes: the extra charge, the chance it is used, the cooldown it
+  takes off another skill
+- An item's line reads "Augmented Ascended Awakened Shield" the way the game
+  says it
+- Ranges no longer print as [20.000000298023224-30.000001192092896]
+
 ### Support
 
 Support is via this thread only. Only bug fixes will be reviewed. Feature requests
