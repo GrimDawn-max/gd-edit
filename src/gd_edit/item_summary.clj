@@ -1094,7 +1094,16 @@
 (defn record-primary-attributes
   [record]
 
-  [(when-let [block (record "defensiveBlock")]
+  ;; A weapon states its speed in words, and states them in the field itself:
+  ;; "Speed:  Fast". Where the field holds a tag name instead, the localization
+  ;; table has no entry for it -- CharacterAttackSpeedAverage on a shield, which
+  ;; the game shows no speed line for either -- so an unresolvable one is left
+  ;; alone rather than printed raw.
+  [(when-let [speed (some-> (record "characterBaseAttackSpeedTag") not-empty str)]
+     (let [text (or (get (dbu/localization-table) speed)
+                    (when (str/includes? speed " ") speed))]
+       (when text (str/replace (str/trim (str text)) #"\s+" " "))))
+   (when-let [block (record "defensiveBlock")]
      (effect-kv->string record ["defensiveBlock" block]))
    (when-let [recovery (record "blockRecoveryTime")]
      (effect-kv->string record ["blockRecoveryTime" recovery]))
@@ -1131,6 +1140,17 @@
      (->>
      [;; Name of item
       (yellow (dbu/item-name item))
+
+      ;; Bound to the character, which the game says directly under the name.
+      ;; Nothing records it: applying an augment or an illusion is what binds an
+      ;; item, as the game's own confirmations say -- "Augmenting this item will
+      ;; make it soulbound" -- so it is read back off the item. A few records
+      ;; are bound in their own right and carry a bare 1 for it.
+      (when (or (= 1 (some-> (base-record "soulbound") long))
+                (not-empty (str (:augment-name item)))
+                (not-empty (str (:transmute-name item))))
+        (str (or (get (dbu/localization-table) "tagSoulbound") "Soulbound")))
+
       (when-let [item-text (base-record "itemText")]
         (u/wrap-line 80 item-text))
 
