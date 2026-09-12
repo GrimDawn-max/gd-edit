@@ -207,6 +207,52 @@ gd-edit stops rather than guessing, because writing back something it misread
 would corrupt a file that is currently fine. Wait for a build that understands
 the new format.
 
+### Items on a character I made with make-char show as unusable
+
+The item sits in its slot with its requirement in red, and its bonuses are not
+counted — so the character's attributes, combat stats and resistances all read
+lower than they should, and lower than gd-edit shows them.
+
+This is about how the character was assembled, not about the build. A build
+reaches a heavy item's attribute requirement through the rest of its gear: in
+play the gear went on one piece at a time and every step was legal, so the game
+never had to work anything out. `make-char` puts all fourteen pieces on at once,
+and the game checks equipment when it loads a character it did not equip itself.
+It cannot count a bonus from an item it has not accepted yet, and it has no
+legal order to work back to, so some items are refused.
+
+**To settle it**, raise the attribute the item asks for, load the character
+once, and set it back:
+
+```
+set physique 1000
+write
+```
+
+Load the character in the game, then quit. Now put it back:
+
+```
+set physique 178          the value the build actually uses
+write
+```
+
+The game keeps the gear from then on — acceptance is sticky, so the temporary
+figure does not need to stay. Anything you generated in between, a character
+sheet especially, describes the bumped character and should be regenerated.
+
+Two things worth knowing:
+
+- **It does not happen to every build.** Of six characters imported from
+  published builds, two were affected — one with seven items refused and one
+  with a single item. Which items a build can bootstrap depends on what the
+  character has before any gear counts, including what its skills and devotions
+  give, and gd-edit cannot work it out in advance. `make-char` says the
+  situation may arise; it does not claim to know which items.
+- **gd-edit's own figures are right.** It computes from the gear as equipped,
+  which is the settled state the game reaches once the items are accepted. On a
+  character the game equipped itself this never arises, which is why a played
+  character's sheet matches the game exactly.
+
 ### My changes did not appear in the game
 
 Two usual causes:
