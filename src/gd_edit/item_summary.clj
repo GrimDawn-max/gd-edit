@@ -81,6 +81,47 @@
        class
        "Unknown"))
 
+(defn record-requirements
+  "What an item demands of the character, as {\"strength\" n \"dexterity\" n
+  \"intelligence\" n} -- physique, cunning and spirit in the game's words.
+
+  The figures are not stored on the item. Each is an equation named for the
+  item's subtype, evaluated against the item's level, which is why an item can
+  say what it needs without any record holding the number."
+  [record]
+  (let [cost-record (or (dbu/record-by-name (record "itemCostName"))
+                        (dbu/record-by-name "records/game/itemcostformulas.dbr"))]
+    (when-let [subtype (record-class-subtype record)]
+      (let [;; Only the three attribute requirements are ever displayed. The
+            ;; sibling "cost" equation is priced in gold and unused, and on
+            ;; some records it refers to variables we do not supply --
+            ;; itemcostformulas_epic.dbr's shieldCostEquation wants
+            ;; damageAvgBase and shieldBlockChance -- which evaluated to nil
+            ;; and took the whole item summary down with it.
+            wanted #{"strength" "dexterity" "intelligence"}]
+        (->> cost-record
+             (filter #(and (string? (key %))
+                           (str/starts-with? (key %) subtype)
+                           (str/ends-with? (key %) "Equation")))
+             (map (fn [[k equation]]
+                    [(str/lower-case (subs k (count subtype)
+                                           (- (count k) (count "Equation"))))
+                     equation]))
+             (filter #(wanted (first %)))
+             (map (fn [[name equation]]
+                    ;; An equation we cannot evaluate costs one requirement
+                    ;; line, not the whole summary.
+                    [name (try
+                            (Math/round
+                             (eq/evaluate equation
+                                          {"itemLevel" (record "itemLevel")
+                                           "totalAttCount" (level/attribute-points-total-at-level (get record "levelRequirement" 1))
+                                           "itemPrefixCost" 0
+                                           "itemSuffixCost" 0}))
+                            (catch Throwable _ nil))]))
+             (remove #(nil? (second %)))
+             (into {}))))))
+
 (defn record-cost
   [record]
   (letfn [(cost [record cost-record]
@@ -91,30 +132,7 @@
                     ;; itemcostformulas_epic.dbr's shieldCostEquation wants
                     ;; damageAvgBase and shieldBlockChance -- which evaluated to nil
                     ;; and took the whole item summary down with it.
-                    wanted #{"strength" "dexterity" "intelligence"}
-                    requirements (->> cost-record
-                                      (filter #(and (string? (key %))
-                                                    (str/starts-with? (key %) subtype)
-                                                    (str/ends-with? (key %) "Equation")))
-                                      (map (fn [[k equation]]
-                                             [(str/lower-case (subs k
-                                                                    (count subtype)
-                                                                    (- (count k) (count "Equation"))))
-                                              equation]))
-                                      (filter #(wanted (first %)))
-                                      (map (fn [[name equation]]
-                                             ;; An equation we cannot evaluate costs one
-                                             ;; requirement line, not the whole summary.
-                                             [name (try
-                                                     (Math/round
-                                                      (eq/evaluate equation
-                                                                   {"itemLevel" (record "itemLevel")
-                                                                    "totalAttCount" (level/attribute-points-total-at-level (get record "levelRequirement" 1))
-                                                                    "itemPrefixCost" 0
-                                                                    "itemSuffixCost" 0}))
-                                                     (catch Throwable _ nil))]))
-                                      (remove #(nil? (second %)))
-                                      (into {}))]
+                    requirements (record-requirements record)]
 
                 [(when-let [strength-req (requirements "strength")]
                    (format "Required Physique: %s" (number strength-req)))

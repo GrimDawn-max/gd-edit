@@ -13,6 +13,7 @@
             [gd-edit.db-utils :as dbu]
             [gd-edit.max-rolls :as max-rolls]
             [gd-edit.item-stats :as item-stats]
+            [gd-edit.item-summary :as item-summary]
             [clojure.java.io :as io]
 
             [clojure.pprint :refer [pprint]]
@@ -1006,6 +1007,53 @@
           nil)
         (throw e)))))
 
+(defn- equipment-the-game-may-refuse
+  "Items asking more than the character has before any of them are counted.
+
+  The game checks equipment when it loads a character it did not equip itself,
+  and it cannot count a bonus from an item it has not accepted yet. A build
+  reaches a heavy item's requirement through the rest of its gear, which is
+  fine when the gear went on one piece at a time, and is not something the game
+  can work out in a single pass. So the test here is against the character's own
+  attributes: what it would have if the game accepted nothing."
+  [character]
+  (let [have {"strength" (long (or (:physique character) 0))
+              "dexterity" (long (or (:cunning character) 0))
+              "intelligence" (long (or (:spirit character) 0))}]
+    (for [it (concat (:equipment character) (get-in character [:weapon-sets 0 :items]))
+          :when (not-empty (str (:basename it)))
+          :let [rec (dbu/record-by-name (:basename it))
+                short (some->> rec item-summary/record-requirements
+                               (keep (fn [[k v]] (when (> (long v) (have k 0)) [k (long v)])))
+                               seq)]
+          :when short]
+      [(str (dbu/item-name it (dbu/db-and-index))) (into {} short)])))
+
+(defn- warn-about-requirements
+  [character]
+  (when-let [short (seq (equipment-the-game-may-refuse character))]
+    (let [label {"strength" "Physique" "dexterity" "Cunning" "intelligence" "Spirit"}]
+      (println)
+      (println (format "%d of this character's items ask for more than it has on its own:"
+                       (count short)))
+      (println)
+      (doseq [[nm reqs] (sort-by (comp - #(apply max (vals %)) second) short)]
+        (println (format "    %-42s %s" nm
+                         (str/join ", " (for [[k v] reqs] (str (label k k) " " v))))))
+      (println)
+      (println "The build reaches those figures through the rest of its gear, which is")
+      (println "how it works in play -- but the game checks equipment when it loads a")
+      (println "character it did not equip itself, and cannot count a bonus from an item")
+      (println "it has not accepted yet. So these may show as unusable the first time you")
+      (println "load it, and their bonuses will not count until they are accepted. Some")
+      (println "will be accepted anyway, on the strength of the gear the game does take.")
+      (println)
+      (println "To settle it: raise the attributes above, load the character once, then")
+      (println "set them back. The game keeps the gear from then on.")
+      (println)
+      (println "    set physique 1000")
+      (println "    write"))))
+
 (defn create-character-handler
   [[_ tokens]]
 
@@ -1040,7 +1088,8 @@
                                                       :max-rolls? max-rolls?)]
         (println)
         (println "Loading newly created character...")
-        (au/load-character-file character-filepath)))))
+        (au/load-character-file character-filepath)
+        (warn-about-requirements @globals/character)))))
 
 
 (comment
