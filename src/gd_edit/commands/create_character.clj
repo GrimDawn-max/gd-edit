@@ -1030,29 +1030,28 @@
       [(str (dbu/item-name it (dbu/db-and-index))) (into {} short)])))
 
 (defn- warn-about-requirements
+  "Say that the game may refuse some of this gear, without pretending to know which.
+
+  A build reaches a heavy item's requirement through the rest of its gear, and
+  the game checks equipment when it loads a character it did not equip itself.
+  Whether it manages depends on what the character has before any item counts --
+  its own attributes, and what its skills and devotions add -- and an attempt to
+  work out which items it would refuse was wrong on both characters it was
+  checked against, predicting ten where seven were refused and seven where none
+  were. So this says only that it can happen, and where to read about it."
   [character]
-  (when-let [short (seq (equipment-the-game-may-refuse character))]
-    (let [label {"strength" "Physique" "dexterity" "Cunning" "intelligence" "Spirit"}]
-      (println)
-      (println (format "%d of this character's items ask for more than it has on its own:"
-                       (count short)))
-      (println)
-      (doseq [[nm reqs] (sort-by (comp - #(apply max (vals %)) second) short)]
-        (println (format "    %-42s %s" nm
-                         (str/join ", " (for [[k v] reqs] (str (label k k) " " v))))))
-      (println)
-      (println "The build reaches those figures through the rest of its gear, which is")
-      (println "how it works in play -- but the game checks equipment when it loads a")
-      (println "character it did not equip itself, and cannot count a bonus from an item")
-      (println "it has not accepted yet. So these may show as unusable the first time you")
-      (println "load it, and their bonuses will not count until they are accepted. Some")
-      (println "will be accepted anyway, on the strength of the gear the game does take.")
-      (println)
-      (println "To settle it: raise the attributes above, load the character once, then")
-      (println "set them back. The game keeps the gear from then on.")
-      (println)
-      (println "    set physique 1000")
-      (println "    write"))))
+  (when (seq (equipment-the-game-may-refuse character))
+    (println)
+    (println "Some of this character's items ask for more than it has on its own, and")
+    (println "reach it through the rest of the gear. The game checks equipment when it")
+    (println "loads a character it did not equip itself, so those items may show as")
+    (println "unusable the first time, and their bonuses will not count while they are.")
+    (println)
+    (println "If that happens: raise the attribute the item asks for, load the character")
+    (println "once, then set it back. The game keeps the gear from then on.")
+    (println)
+    (println "    set physique 1000")
+    (println "    write")))
 
 (defn create-character-handler
   [[_ tokens]]

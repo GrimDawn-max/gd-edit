@@ -664,9 +664,10 @@
                "some items may show as unusable the first time you load a created"
                "character, and their bonuses will not count while they are."
                ""
-               "make-char says which items are affected. To settle it, raise the"
-               "attribute, load the character once, then set it back -- the game keeps the"
-               "gear from then on:"
+               "Which items it refuses depends on what the character has before any of"
+               "them count, and is not something gd-edit can work out in advance. To"
+               "settle it, raise the attribute the item asks for, load the character once,"
+               "then set it back -- the game keeps the gear from then on:"
                ""
                "  set physique 1000"
                "  write"])]
