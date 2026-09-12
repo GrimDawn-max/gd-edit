@@ -1204,14 +1204,25 @@
       (when-let [item-text (base-record "itemText")]
         (u/wrap-line 80 item-text))
 
-      ;; Item classification. An ascended item shows "Ascended" in place of its
-      ;; rarity, the way the game's own tooltip does.
+      ;; Item classification, in the order the game reads it out: "Augmented
+      ;; Ascended Awakened Shield". An ascended item shows "Ascended" in place
+      ;; of its rarity. The other two words are not fields -- an item is
+      ;; augmented because it carries an augment, and awakened because its
+      ;; record lives under records/items/awakened, which is all that separates
+      ;; those 106 from the rest.
       (let [ascended? (not= "" (str (:ascended-name item)))
+            augmented? (not-empty (str (:augment-name item)))
+            awakened? (str/includes? (str (:recordname base-record)) "/items/awakened/")
+            lt (dbu/localization-table)
             rarities (if ascended?
                        ["Ascended"]
                        (into [] (vals (select-keys base-record ["itemClassification" "armorClassification"]))))
-            classifications (conj rarities (record-class-display-name (base-record "Class")))]
-        (str/join " " classifications))
+            classifications (concat (when augmented? ["Augmented"])
+                                    rarities
+                                    (when awakened?
+                                      [(or (get lt "tagStyleUniqueAwakened") "Awakened")])
+                                    [(record-class-display-name (base-record "Class"))])]
+        (str/join " " (remove nil? classifications)))
 
       (record-primary-attributes base-record)
 
