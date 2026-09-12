@@ -340,6 +340,10 @@
   [keyname]
   (let [components (camelcase->keywords keyname)]
     (when (or (#{"skillCooldownTime"
+                 ;; a skill modifier's own fields: neither begins with a word
+                 ;; the general rule below admits, so they are named here
+                 "cooldownCharges"
+                 "refreshCooldownChance"
                  "petBonusName"
                  "weaponDamagePct"
                  "petLimit"
@@ -607,6 +611,21 @@
     "skillChargeMultipliers"
     })
 
+(def refresh-cooldown-triggers
+  "What sets a cooldown refresh off, in the game's words.
+
+  Taken from tagRefreshSkillConditionNN, which is what the game fills the
+  {%t0} of tagSkillCooldownRefreshName with."
+  {"AttackEnemy"     "Chance on Attack"
+   "AttackEnemyCrit" "Chance on Critical Attack"
+   "Block"           "Chance on Block"
+   "HitByEnemy"      "Chance when Hit"
+   "HitByMelee"      "Chance when Hit by Melee Attacks"
+   "HitByProjectile" "Chance when Hit by Ranged Attacks"
+   "HitByCrit"       "Chance when Hit by a Critical"
+   "CastBuff"        "Chance when a Buff is Cast"
+   "OnKill"          "Chance on Enemy Death"})
+
 (def primary-only-fields
   "Printed with the item's own properties rather than among its effects.
 
@@ -654,6 +673,30 @@
           (= k "offensiveElementalResistanceReductionAbsoluteDurationMin")
           nil
 
+
+          ;; A skill modifier's own fields, in the game's words. The phrasings
+          ;; are the game's format strings with their markup taken out:
+          ;; CooldownChargesMod, SkillChanceWeightMod, and
+          ;; tagSkillCooldownRefreshName filled with tagRefreshSkillConditionNN.
+          (= k "cooldownCharges")
+          (format "%s Charges" (signed-number (u/maybe-int v)))
+
+          (= k "skillChanceWeight")
+          (format "%s Chance to be Used" (signed-percentage (u/maybe-int v)))
+
+          (= k "refreshCooldownChance")
+          (let [trigger (refresh-cooldown-triggers
+                         (str (lookup-and-resolve- record "refreshCooldownTrigger")))
+                skill (some-> (get record "refreshCooldownSkill") not-empty str
+                              dbu/record-by-name dbu/skill-name-from-record)
+                amount (u/maybe-int (lookup-and-resolve record "refreshCooldownAmount"))]
+            (when (and trigger amount)
+              (if skill
+                (format "%s %s to reduce cooldown of %s by %s Seconds"
+                        (percentage (u/maybe-int v)) trigger skill amount)
+                (format "%s %s to reduce cooldown by %s Seconds"
+                        (percentage (u/maybe-int v)) trigger amount))))
+          (#{"refreshCooldownTrigger" "refreshCooldownSkill" "refreshCooldownAmount"} k) nil
 
           ;; A shield's block, in the game's own words: "34% Chance to block
           ;; 975 damage", with the recovery on a line of its own. The generic
@@ -839,17 +882,24 @@
 
 (declare skill-mods-summary effect-summary)
 
+;; defined below, and used here to group a skill's modifiers under its name
+(declare indent-all)
+
 (defn skill-mods-summary
   [record recursion-blocks]
 
-  (flatten
-   (for [{:keys [name modifier] :as entry} (skill-modifiers record)]
-     (->> (effect-summary modifier (conj recursion-blocks :skill-mods))
-          ;; A modifier we have no phrasing for yields nothing rather than the
-          ;; word "null" attached to a skill name.
-          (keep (fn [desc]
-                  (when-not (str/blank? (str desc))
-                    (format "%s to %s" desc name))))))))
+  (for [{:keys [name modifier]} (skill-modifiers record)
+        :let [lines (->> (effect-summary modifier (conj recursion-blocks :skill-mods))
+                         flatten
+                         ;; a modifier we have no phrasing for yields nothing
+                         ;; rather than the word "null" under a skill name
+                         (remove #(str/blank? (str %))))]
+        :when (seq lines)]
+    ;; Under the skill they change, the way the game groups them. Suffixing each
+    ;; line with "to <skill>" reads well enough for "50% Weapon Damage" and not
+    ;; at all for "30% Chance on Attack to reduce cooldown of Leap by 3 Seconds",
+    ;; which then carries two different "to"s meaning two different things.
+    [(yellow name) (indent-all lines)]))
 
 (defn effect-display-order
   [key-name]
