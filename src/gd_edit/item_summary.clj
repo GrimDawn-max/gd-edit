@@ -716,9 +716,16 @@
           (= k "blockAbsorption") nil
 
           (str/starts-with? k "conversionInType")
-          ;; Without a percentage there is no conversion to describe.
-          (when-let [pct (percentage (lookup-and-resolve record "conversionPercentage"))]
-            (let [idx (subs k (count "conversionInType"))]
+          ;; An item may convert more than one kind of damage, and each
+          ;; conversion carries its own percentage under its own index. Reading
+          ;; the unindexed one gave every conversion on an item the first one's
+          ;; figure: Rotmender's Ring converted Vitality at 59% and read 59% for
+          ;; its Physical conversion too, which rolls from a different base
+          ;; entirely. Without a percentage there is no conversion to describe.
+          (let [idx (subs k (count "conversionInType"))
+                pct-field (if (= "" idx) "conversionPercentage"
+                              (str "conversionPercentage" idx))]
+            (when-let [pct (percentage (lookup-and-resolve record pct-field))]
               (format "%s %s Damage converted to %s Damage"
                       pct
                       (damage-type-name (record (str "conversionInType" idx)))
@@ -851,10 +858,25 @@
         ;; A conversion line is keyed on conversionInType, but the stat that
         ;; actually rolled is the matching conversionPercentage -- so look the
         ;; range up under the name it was recorded against.
-        range-key (if (and (string? k) (str/starts-with? k "conversionInType"))
+        range-key (cond
+                    ;; A conversion line is keyed on conversionInType, but the
+                    ;; stat that actually rolled is the matching
+                    ;; conversionPercentage -- so look the range up under the
+                    ;; name it was recorded against.
+                    (and (string? k) (str/starts-with? k "conversionInType"))
                     (let [idx (subs k (count "conversionInType"))]
                       (if (= "" idx) "conversionPercentage" (str "conversionPercentage" idx)))
-                    k)]
+
+                    ;; A damage-over-time line is keyed on the duration, and
+                    ;; leads with the total damage: "70 Poison Damage over 5
+                    ;; seconds". The duration's range beside that reads as the
+                    ;; damage's -- [4-6] against 70 -- and the total's own range
+                    ;; is not a thing either, being two rolls multiplied. So
+                    ;; this line carries none.
+                    (and (string? k) (str/ends-with? k "DurationMin"))
+                    nil
+
+                    :else k)]
     (if-let [r (and (string? s) (get *stat-ranges* range-key))]
       (let [[lo hi] r]
         (if (== (double lo) (double hi))
@@ -1181,7 +1203,10 @@
    ;; Ranges are fitted from the record's *base* values, so the plain record has
    ;; to be used here -- base-record above has the rolled values merged over
    ;; them and would fit nonsense.
-   (binding [*stat-ranges* (merge (seed-search/stat-ranges (dbu/record-by-name (:basename item)))
+   ;; measured across the affixes as well as the base: a field several of them
+   ;; contribute to rolls as one number, and the base's own range is narrower
+   ;; than the value that sits beside it
+   (binding [*stat-ranges* (merge (seed-search/item-stat-ranges item)
                                   (item-stats/modifier-ranges item))
              *pet-bonus* (item-stats/pet-bonus (dbu/record-by-name (:basename item)) item)]
     ;; Realized inside the binding: the summary is a lazy sequence, and a
@@ -1236,15 +1261,23 @@
                                      (not (str/starts-with? k "offensiveBase"))))
                            (into {})))
 
+      ;; An affix's own contribution, listed under the item's. Its numbers are
+      ;; the affix's alone -- the prefix that gives 330 Health, where the line
+      ;; above already reads 551 for the item -- so it must not borrow the
+      ;; item's ranges, which are fitted across the affixes and describe the
+      ;; total. #{:affix} is what keeps them off, the same way a component's
+      ;; are kept off below.
       (when-let [prefix (dbu/record-by-name (:prefix-name item))]
         (effect-summary (cond-> prefix
                           item-skill-level
-                          (assoc "itemSkillLevel" item-skill-level))))
+                          (assoc "itemSkillLevel" item-skill-level))
+                        #{:affix}))
 
       (when-let [suffix (dbu/record-by-name (:suffix-name item))]
         (effect-summary (cond-> suffix
                           item-skill-level
-                          (assoc "itemSkillLevel" item-skill-level))))
+                          (assoc "itemSkillLevel" item-skill-level))
+                        #{:affix}))
 
       ;; What has been socketed into or applied to the item. These are separate
       ;; records with their own stats, and the game lists them under the item's

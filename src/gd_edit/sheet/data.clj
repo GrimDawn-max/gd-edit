@@ -132,9 +132,11 @@
                   base (is/with-rolled-stats rec it)
                   isl (calc-isl base)
                   at-level (fn [r] (cond-> r isl (assoc "itemSkillLevel" isl)))
-                  ;; ranges are fitted from the record's *base* values, so the
-                  ;; unrolled record has to be the one measured
-                  own-ranges (merge (ss/stat-ranges rec) (is/modifier-ranges it))
+                  ;; the same ranges the stats above are measured against --
+                  ;; fitted across the affixes, not the base record alone, which
+                  ;; understates any field a prefix or suffix also contributes to
+                  own-ranges (merge (or ranges (ss/stat-ranges rec))
+                                    (is/modifier-ranges it))
                   groups
                   (binding [isum/*stat-ranges* own-ranges
                             isum/*pet-bonus* (is/pet-bonus rec it)]

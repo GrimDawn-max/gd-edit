@@ -737,7 +737,10 @@
   "field -> [low high] for `record`, or nil if the engine is unavailable.
 
   This is what lets an item summary show the roll next to the range it came
-  from, the way the game's own tooltips do."
+  from, the way the game's own tooltips do.
+
+  The record alone, which is only the whole story for an item with no affixes --
+  see `item-stat-ranges` for one that has them."
   [record]
   (when (and record (item-stats/available?))
     (if-let [hit (get @range-cache (:recordname record))]
@@ -746,3 +749,31 @@
                     (catch Throwable _ {}))]
         (swap! range-cache assoc (:recordname record) rs)
         rs))))
+
+(defn item-stat-ranges
+  "field -> [low high] for `item`, counting the affixes it carries.
+
+  A field several of them contribute to rolls as one number and has to be
+  measured as one: a ring whose base gives 240 Health and whose prefix gives 330
+  rolls 551, and measuring the base alone offers [192-288] beside it -- a range
+  the value it sits next to cannot be in.
+
+  Cached per combination rather than per record, since the same base takes any
+  number of different affixes."
+  [item]
+  (when (and item (item-stats/available?))
+    (when-let [record (dbu/record-by-name (:basename item))]
+      (let [prefix (some-> (:prefix-name item) not-empty str)
+            suffix (some-> (:suffix-name item) not-empty str)
+            modifier (some-> (:modifier-name item) not-empty str)]
+        (if (and (nil? prefix) (nil? suffix) (nil? modifier))
+          (stat-ranges record)
+          (let [k [(:recordname record) modifier prefix suffix]]
+            (if-let [hit (get @range-cache k)]
+              hit
+              (let [rs (try (or (some-> (fit-plan record modifier prefix suffix)
+                                        searchable-fields)
+                                {})
+                            (catch Throwable _ {}))]
+                (swap! range-cache assoc k rs)
+                rs))))))))
