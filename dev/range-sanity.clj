@@ -28,7 +28,7 @@
 ;; range; the second stating two numbers for the value, of which the first is the
 ;; one the range is fitted to.
 (def line-pattern
-  #"^\s*([-+]?[0-9]+(?:\.[0-9]+)?)(?:-[0-9.]+)?%?\s+[^\[]*\[([0-9.]+)-([0-9.]+)\]")
+  #"^\s*([-+]?[0-9]+(?:\.[0-9]+)?)(?:-[0-9.]+)?%?\s+[^\[]*\[(-?[0-9.]+)(?:-| to )(-?[0-9.]+)\]")
 
 (let [load-loc (requiring-resolve 'gd-edit.io.arc/load-localization-table)
       load-db  (requiring-resolve 'gd-edit.io.arz/load-game-db)
@@ -60,14 +60,16 @@
           (swap! checked inc)
           (let [[_ v lo hi] m
                 v (Double/parseDouble v) lo (Double/parseDouble lo) hi (Double/parseDouble hi)]
-            ;; A reduction is printed with its sign and its range without one:
-            ;; "-11% Skill Energy Cost [9-11]" is 11 out of a possible 9 to 11,
-            ;; and reads correctly enough. Compare the magnitude there.
-            (let [v (if (and (neg? v) (pos? lo) (pos? hi)) (- v) v)]
-              ;; a hair's tolerance: a rolled value is rounded for display and
-              ;; its range is not, so a value can sit a whisker outside honestly
-              (when (or (< v (- lo 1.0)) (> v (+ hi 1.0)))
-                (swap! bad conj [(.getName f) nm (str/trim s)])))))))
+            ;; A reduction carries its sign into its range -- "-11% Skill
+            ;; Energy Cost [-11 to -9]" -- so no allowance is made for one that
+            ;; does not. That was excused once and the excuse would hide the
+            ;; next sign that goes astray.
+            ;;
+            ;; A hair's tolerance either way: a rolled value is rounded for
+            ;; display and its range is not, so a value can sit a whisker
+            ;; outside honestly.
+            (when (or (< v (- lo 1.0)) (> v (+ hi 1.0)))
+              (swap! bad conj [(.getName f) nm (str/trim s)]))))))
     (println (format "%d lines carry both a value and a range" @checked))
     (println (format "%d of them state a value the range cannot hold" (count @bad)))
     (println)

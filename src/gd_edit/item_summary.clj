@@ -878,10 +878,22 @@
 
                     :else k)]
     (if-let [r (and (string? s) (get *stat-ranges* range-key))]
-      (let [[lo hi] r]
+      (let [[lo hi] r
+            ;; A reduction is printed with its sign -- "-11% Skill Energy Cost"
+            ;; -- while its range is recorded as a magnitude. Printed as it
+            ;; stands that reads [9-11] beside -11, which is the one stat on the
+            ;; page whose bracket does not mean what every other one means. So
+            ;; the range takes the sign too, and turns around: 9 to 11 off the
+            ;; cost is -11 to -9.
+            negated? (re-find #"^\s*-\d" (str/replace (str s) #"\u001b\[[0-9;]*m" ""))
+            [lo hi] (if (and negated? (pos? (double lo)) (pos? (double hi)))
+                      [(- hi) (- lo)]
+                      [lo hi])
+            ;; "[-11--9]" cannot be read; a word can be
+            sep (if (or (neg? (double lo)) (neg? (double hi))) " to " "-")]
         (if (== (double lo) (double hi))
           s
-          (format "%s [%s-%s]" s (u/maybe-int lo) (u/maybe-int hi))))
+          (format "%s [%s%s%s]" s (u/maybe-int lo) sep (u/maybe-int hi))))
       s)))
 
 (defn sub-record->string
