@@ -885,14 +885,36 @@
             ;; page whose bracket does not mean what every other one means. So
             ;; the range takes the sign too, and turns around: 9 to 11 off the
             ;; cost is -11 to -9.
-            negated? (re-find #"^\s*-\d" (str/replace (str s) #"\u001b\[[0-9;]*m" ""))
+            bare (str/replace (str s) #"\u001b\[[0-9;]*m" "")
+            negated? (re-find #"^\s*-\d" bare)
             [lo hi] (if (and negated? (pos? (double lo)) (pos? (double hi)))
                       [(- hi) (- lo)]
                       [lo hi])
             ;; "[-11--9]" cannot be read; a word can be
-            sep (if (or (neg? (double lo)) (neg? (double hi))) " to " "-")]
-        (if (== (double lo) (double hi))
-          s
+            sep (if (or (neg? (double lo)) (neg? (double hi))) " to " "-")
+            ;; A flat damage line states a spread -- "93-119 Cold Damage" --
+            ;; where both ends rolled, from ranges of their own. One bracket
+            ;; beside it describes the first number only, and next to a pair
+            ;; that reads as the range of the whole spread. So when the other
+            ;; end has a range too, both are given: [(64-93)-(82-119)].
+            ;;
+            ;; This is not the weapon's own damage, which is a spread the seed
+            ;; does not touch and which the game itself shows bare.
+            pair-range (when (and (string? k) (str/ends-with? k "Min"))
+                         (get *stat-ranges* (str (subs k 0 (- (count k) 3)) "Max")))
+            pair? (and pair-range
+                       (not= (vec pair-range) [lo hi])
+                       (re-find #"^\s*[-+]?[0-9.]+-[0-9.]+" bare))]
+        (cond
+          pair?
+          (let [[lo2 hi2] pair-range]
+            (format "%s [(%s-%s)-(%s-%s)]" s
+                    (u/maybe-int lo) (u/maybe-int hi)
+                    (u/maybe-int lo2) (u/maybe-int hi2)))
+
+          (== (double lo) (double hi)) s
+
+          :else
           (format "%s [%s%s%s]" s (u/maybe-int lo) sep (u/maybe-int hi))))
       s)))
 
