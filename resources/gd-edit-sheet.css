@@ -45,7 +45,12 @@ tr.hd td{font-size:20px;letter-spacing:.07em;text-transform:uppercase;color:var(
    sides equal whatever the item names do. A grid of 1fr is minmax(auto,1fr) and
    refuses to shrink below its widest content, so one long name widened that
    side and pushed the panel off centre. */
-.doll{display:flex;align-items:stretch;gap:20px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:22px}
+/* The row wraps at any width rather than only below 900px. Between there and
+   the width where all four columns fit, it used to crush them instead: item
+   names cut mid-word, and the middle boxes squeezed until Offensive Ability
+   read "2,1". Each column now states the least it can usefully occupy, so a
+   column that no longer fits drops to the next line and keeps its contents. */
+.doll{display:flex;flex-wrap:wrap;align-items:stretch;gap:20px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:22px}
 .dcol:first-child{align-items:stretch}
 .dcol:last-child{align-items:stretch}
 .dcol:first-child .dcell{flex-direction:row;text-align:left}
@@ -61,7 +66,10 @@ tr.hd td{font-size:20px;letter-spacing:.07em;text-transform:uppercase;color:var(
 .srow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:4px 0;border-bottom:1px solid var(--line)}
 .srow:last-child{border-bottom:0}
 .srow span{font-size:22px;color:var(--dim)}
-.srow b{font-size:26px;font-weight:600;font-family:"Libertinus Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+/* the figure is the thing worth reading, so if a row is short of space the
+   label wraps and the number stays whole */
+.srow b{font-size:26px;font-weight:600;font-family:"Libertinus Mono",ui-monospace,monospace;
+  font-variant-numeric:tabular-nums;white-space:nowrap;flex:0 0 auto}
 /* Resistances as the game lays them out: five across, two rows, icon over
    value, with the amount over the cap in brackets. */
 .rgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px 6px}
@@ -71,19 +79,24 @@ tr.hd td{font-size:20px;letter-spacing:.07em;text-transform:uppercase;color:var(
 .rcell b{font-size:24px;font-weight:600;font-family:"Libertinus Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;line-height:1.2}
 .rcell.capped b{color:var(--accent)}
 /* The three stat panels sit in a row beneath the character card. */
-.cstack{display:flex;align-items:stretch;gap:12px;width:100%}
-.cstack .cbox{flex:1 1 0;min-width:0}
-.cstack .cbox.res{flex:1.6 1 0}
+/* The three boxes share the row, but never below the width their contents
+   need: flex-basis 0 with min-width 0 sized them purely by ratio, so between
+   the 1500px breakpoint below and the width where everything fits, Offensive
+   Ability was cut to "2,1". A min-width makes them wrap when they no longer
+   fit, at whatever width that turns out to be, rather than at a guessed one. */
+.cstack{display:flex;align-items:stretch;gap:12px;width:100%;flex-wrap:wrap}
+.cstack > .cbox{flex:1 1 280px;min-width:280px}
+.cstack > .cbox.res{flex:1.6 1 340px;min-width:340px}
 body{margin:0;padding:28px 32px 48px;background:var(--bg);color:var(--fg);font-family:"Libertinus Serif",Palatino,Georgia,serif;font-size:26px;line-height:1.55}
 .wrap{max-width:none;margin:0}
 /* Columns are capped near what a long name needs, and the centre takes the
    surplus. Cells pack from the outer edge -- icon then name, mirrored right --
    so extra column width lands as dead space between the names and the centre. */
-.dcol{flex:0 1 516px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.dcol{flex:0 1 516px;min-width:330px;display:flex;flex-direction:column;gap:10px}
 /* justify-content:flex-start, not center. This was a row once, where centring
    was horizontal; as a column it centres vertically and pushed the panels below
    the top of the item lists beside them. */
-.dmid{flex:1 1 900px;display:flex;align-items:stretch;justify-content:flex-start;flex-direction:column;gap:12px;min-width:0;max-width:1500px}
+.dmid{flex:1 1 900px;display:flex;align-items:stretch;justify-content:flex-start;flex-direction:column;gap:12px;min-width:640px;max-width:1500px}
 .srow b i{font-style:normal;font-size:inherit;font-weight:inherit;color:inherit}
 .srow b i::before{content:""}
 .ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
@@ -144,16 +157,15 @@ section.wide{grid-column:1/-1}
 
 @media(max-width:900px){
   .panels{grid-template-columns:1fr}
-  .doll{flex-wrap:wrap}
-  .dmid{flex:1 1 100%;order:-1;margin-bottom:6px}
-  .dcol{flex:1 1 45%}
+  .dmid{flex:1 1 100%;order:-1;margin-bottom:6px;min-width:0}
+  .dcol{flex:1 1 45%;min-width:0}
+  .dart{flex:1 1 100%;min-width:0}
+  .cstack > .cbox,.cstack > .cbox.res,.cmid{min-width:0}
 }
 
 @media(max-width:1500px){
   .dmid{flex:0 0 620px}
-  .cstack{flex-wrap:wrap}
-  .cstack .cbox{flex:1 1 46%}
-  .cstack .cbox.res{flex:1 1 100%}
+  .cstack > .cbox.res{flex:1 1 100%}
   .dcol{flex:1 1 45%}
   .dmid{flex:0 0 620px;max-width:100%}
 }
@@ -376,7 +388,7 @@ h1{font-family:"Libertinus Serif",Palatino,Georgia,serif;letter-spacing:0}
 /* ---- portrait ---------------------------------------------------------- */
 /* The character's own screenshot, beside the second column of gear. Dropped in
    by the reader and kept in their browser, or baked in by the generator. */
-.dart{flex:0 1 580px;min-width:0;margin:0;position:relative;display:flex;
+.dart{flex:0 1 580px;min-width:340px;margin:0;position:relative;display:flex;
   border:1px solid var(--line);border-radius:9px;background:var(--card);
   overflow:hidden;cursor:pointer}
 .dart.baked{cursor:default}
@@ -485,8 +497,12 @@ h1{font-family:"Libertinus Serif",Palatino,Georgia,serif;letter-spacing:0}
 /* Combat Stats carries three rows against Attributes' five, so it need not be
    stretched to the height of the row. It sizes to its content and the buffs
    take the space underneath. */
-.cmid{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:12px}
-.cmid .cbox{flex:0 0 auto}
+/* Combat Stats and Buffs share a column, and that column is what sits in the
+   row -- not a .cbox -- so it needs the same floor. Left at "flex:1 1 0;
+   min-width:0" it was the one thing still being crushed: Offensive Ability read
+   "2," at 1980px while the boxes either side of it were comfortable. */
+.cmid{flex:1 1 280px;min-width:280px;display:flex;flex-direction:column;gap:12px}
+.cmid .cbox{flex:0 0 auto;min-width:0}
 /* the two masteries stacked, not side by side */
 .mstack{display:flex;flex-direction:column;gap:12px}
 .mstack section{padding:13px 15px}
