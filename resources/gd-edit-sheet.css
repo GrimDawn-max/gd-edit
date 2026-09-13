@@ -63,13 +63,17 @@ tr.hd td{font-size:20px;letter-spacing:.07em;text-transform:uppercase;color:var(
 
 .cbox{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 15px 14px}
 .cbox h4{margin:0 0 9px;font-size:20px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:600}
-.srow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:4px 0;border-bottom:1px solid var(--line)}
+/* "Health 31,779 / 31,779" is the widest row on the sheet. Where it does not
+   fit, it wraps under its label and stays right-aligned; nowrap on the figure
+   keeps the number itself whole, and margin-left:auto holds it to the right on
+   both the wrapped and unwrapped line. It used to jut out past the box. */
+.srow{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 12px;padding:4px 0;border-bottom:1px solid var(--line)}
 .srow:last-child{border-bottom:0}
 .srow span{font-size:22px;color:var(--dim)}
 /* the figure is the thing worth reading, so if a row is short of space the
    label wraps and the number stays whole */
 .srow b{font-size:26px;font-weight:600;font-family:"Libertinus Mono",ui-monospace,monospace;
-  font-variant-numeric:tabular-nums;white-space:nowrap;flex:0 0 auto}
+  font-variant-numeric:tabular-nums;white-space:nowrap;flex:0 0 auto;margin-left:auto}
 /* Resistances as the game lays them out: five across, two rows, icon over
    value, with the amount over the cap in brackets. */
 .rgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px 6px}
@@ -85,14 +89,18 @@ tr.hd td{font-size:20px;letter-spacing:.07em;text-transform:uppercase;color:var(
    Ability was cut to "2,1". A min-width makes them wrap when they no longer
    fit, at whatever width that turns out to be, rather than at a guessed one. */
 .cstack{display:flex;align-items:stretch;gap:12px;width:100%;flex-wrap:wrap}
-.cstack > .cbox{flex:1 1 280px;min-width:280px}
+.cstack > .cbox{flex:1 1 300px;min-width:300px}
 .cstack > .cbox.res{flex:1.6 1 340px;min-width:340px}
 body{margin:0;padding:28px 32px 48px;background:var(--bg);color:var(--fg);font-family:"Libertinus Serif",Palatino,Georgia,serif;font-size:26px;line-height:1.55}
 .wrap{max-width:none;margin:0}
 /* Columns are capped near what a long name needs, and the centre takes the
    surplus. Cells pack from the outer edge -- icon then name, mirrored right --
    so extra column width lands as dead space between the names and the centre. */
-.dcol{flex:0 1 516px;min-width:330px;display:flex;flex-direction:column;gap:10px}
+/* align-self, because the row stretches its children to a common height and the
+   portrait needs that -- it has a border of its own to fill. An item column has
+   neither, so stretching it only opened a void between the last item of one
+   column and the first of the next once the row began to wrap. */
+.dcol{flex:0 1 516px;min-width:330px;align-self:flex-start;display:flex;flex-direction:column;gap:10px}
 /* justify-content:flex-start, not center. This was a row once, where centring
    was horizontal; as a column it centres vertically and pushed the panels below
    the top of the item lists beside them. */
@@ -155,14 +163,25 @@ section.wide{grid-column:1/-1}
 
 }
 
+/* Four columns across need about 2,675px between them. Below that they cannot
+   all share a row, and the order they are written in -- gear, stats, gear,
+   portrait -- wraps badly: the second gear column can only begin under the
+   stats column, which is the tallest thing on the page, leaving a void beside
+   it the height of both skill trees.
+   
+   So below that width the two gear columns are put together. They share a row,
+   the stats follow, the portrait last: the same reading order, and no gap. */
+@media(max-width:2675px){
+  .dcol{order:1}
+  .dmid{order:2}
+  .dart{order:3}
+}
+
 @media(max-width:900px){
   .panels{grid-template-columns:1fr}
-  /* The gear stays at the top, where it is on a wide screen. The stats used to
-     be lifted above it here, which put half the items after the skill trees --
-     a different sheet at a different window size. */
-  .dcol{flex:1 1 45%;min-width:0;order:1}
-  .dmid{flex:1 1 100%;min-width:0;order:2;margin-top:6px}
-  .dart{flex:1 1 100%;min-width:0;order:3}
+  .dcol{flex:1 1 45%;min-width:0}
+  .dmid{flex:1 1 100%;min-width:0;margin-top:6px}
+  .dart{flex:1 1 100%;min-width:0}
   .cstack > .cbox,.cstack > .cbox.res,.cmid{min-width:0}
 }
 
