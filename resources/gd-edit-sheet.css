@@ -157,9 +157,12 @@ section.wide{grid-column:1/-1}
 
 @media(max-width:900px){
   .panels{grid-template-columns:1fr}
-  .dmid{flex:1 1 100%;order:-1;margin-bottom:6px;min-width:0}
-  .dcol{flex:1 1 45%;min-width:0}
-  .dart{flex:1 1 100%;min-width:0}
+  /* The gear stays at the top, where it is on a wide screen. The stats used to
+     be lifted above it here, which put half the items after the skill trees --
+     a different sheet at a different window size. */
+  .dcol{flex:1 1 45%;min-width:0;order:1}
+  .dmid{flex:1 1 100%;min-width:0;order:2;margin-top:6px}
+  .dart{flex:1 1 100%;min-width:0;order:3}
   .cstack > .cbox,.cstack > .cbox.res,.cmid{min-width:0}
 }
 

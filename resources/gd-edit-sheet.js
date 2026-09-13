@@ -456,8 +456,12 @@
   // one row, however many constellations there are -- up to a point, beyond
   // which they would be too narrow to read and are better left to wrap
   var nc = devo.constellations.length;
-  var ccols = nc <= 14 ? "grid-template-columns:repeat(" + nc + ",minmax(0,1fr))"
-                       : "grid-template-columns:repeat(auto-fill,minmax(240px,1fr))";
+  // As many across as fit, rather than all of them however little room there
+  // is: minmax(0,1fr) let twelve constellations share 700px at 48px each, where
+  // the names ran into one another and "6 / 6 stars" came apart down the page.
+  // Given room they still sit on one row, which is the point of the number.
+  var ccols = "grid-template-columns:repeat(auto-fit,minmax(" +
+              (nc <= 14 ? 170 : 240) + "px,1fr))";
   var devoicons = affinityBar() + '<div class="cstg" style="' + ccols + '">' +
                   devo.constellations.map(constRow).join("") + "</div>";
   var devoPoints = devo.constellations.reduce(function (s, k) { return s + k.starsTaken; }, 0);
