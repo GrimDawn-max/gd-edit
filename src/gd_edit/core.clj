@@ -39,6 +39,7 @@
             [gd-edit.globals :as globals]
             [gd-edit.jline :as jl]
             [gd-edit.self-update :as su]
+            [gd-edit.whats-new :as whats-new]
             [gd-edit.utils :as u]
             [jansi-clj.core :refer [red green yellow bold black]]
             [taoensso.timbre :as t]
@@ -437,16 +438,33 @@
       true
       false)))
 
+(defn- release-highlights
+  "What the release tagged `tag` adds, from its notes, remembered once fetched.
+
+  The notes are asked for at most once per release: they are cached against the
+  tag they came from, so the notice can be shown every launch without going back
+  to the network for it."
+  [tag]
+  (let [cached (:latest-release-highlights @globals/settings)]
+    (if (= (:tag cached) tag)
+      (:lines cached)
+      (let [lines (whats-new/fetch-latest-highlights)]
+        (swap! globals/settings assoc :latest-release-highlights {:tag tag :lines lines})
+        lines))))
+
 (defn- version-notice
   "The \"newer release\" message for `tag`, or nil when it is not ahead of us."
   [tag]
   (when (and tag (su/newer-than-running? tag))
     (green
      (str/join "\n"
-               [(format "A newer release is available: %s   (you have %s)"
-                        tag (:version (su/get-build-info)))
-                (str "    " su/releases-url)
-                "Download it and unzip it over your current folder."]))))
+               (concat
+                [(format "A newer release is available: %s   (you have %s)"
+                         tag (:version (su/get-build-info)))
+                 (str "    " su/releases-url)
+                 "Download it and unzip it over your current folder."]
+                (when-let [lines (release-highlights tag)]
+                  (cons "" (cons "What's new" (map #(str "  " %) lines)))))))))
 
 (defn- notify-repl-if-latest-version-available
   "Tell the user if a newer release exists.
@@ -479,6 +497,20 @@
     (when-let [notice (version-notice tag)]
       (u/print-line notice)
       (u/print-line))))
+
+(defn- notify-what-this-build-added
+  "On the first run of a version, say what has been added since the last one.
+
+  The notice above only reaches someone whose *current* build knows to look for
+  it, which is nobody until they have upgraded once, and never anyone who found
+  the release from the forum rather than from the notice. This half needs no
+  network and no release notes: the build carries the list."
+  []
+  (let [running (:version (su/get-build-info))
+        last-run (:last-run-version @globals/settings)]
+    (when (and running (not= last-run running))
+      (whats-new/print-additions (whats-new/since last-run))
+      (swap! globals/settings assoc :last-run-version running))))
 
 (defn setup-log
   ([]
@@ -648,6 +680,7 @@
   (u/print-line "Need help? Check the docs!\n\thttps://grimdawn-max.github.io/gd-edit/\n")
 
   (notify-repl-if-latest-version-available)
+  (notify-what-this-build-added)
 
   (repl))
 

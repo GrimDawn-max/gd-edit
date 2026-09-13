@@ -50,6 +50,31 @@ startup and compares the tag against its own version, so the tag must be
 `v<major>.<minor>.<patch>` and must sort correctly. It only reports and links —
 nothing downloads or installs itself.
 
+### The notes need a "What's new" section
+
+Give the release body a heading that begins **What's new**, and list what the
+release *adds* under it. Everything up to the next heading is read out of the
+notes and shown to anyone still on an older build, under the update notice:
+
+```markdown
+## What's new
+
+- `write character-sheet` — the character as a web page
+- `resists` — the ten resistances, computed
+
+## Fixes
+
+- ... everything else, which is not shown in the app
+```
+
+Only additions belong in that section. Fixes go below it, where someone looking
+for them will find them; a list of everything is a list nobody reads.
+
+Add the same items to `additions` in `src/gd_edit/whats_new.clj`, tagged with
+the version. That list is compiled in, and is what a build prints on its first
+run after an upgrade — which is the only half that reaches someone who upgraded
+from a forum post rather than from the notice.
+
 ## What was removed
 
 The upstream project published a single executable to the author's Dropbox and
