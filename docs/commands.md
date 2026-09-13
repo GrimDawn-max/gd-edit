@@ -478,8 +478,10 @@ The character as the game shows it, as a web page.
 ```
 write character-sheet ~/Desktop/mary.html
 write character-sheet "C:\Users\You\Desktop\My Sheet.html"
-write character-sheet ~/Desktop/            a directory: the character names the file
 ```
+
+Give it a directory rather than a filename and it names the file after the
+character: `write character-sheet ~/Desktop/` writes `ColdFluffy-sheet.html`.
 
 Equipment with its full tooltips, attributes and combat stats, resistances, every
 skill at the level it actually reaches, the devotion map, and the buffs that are

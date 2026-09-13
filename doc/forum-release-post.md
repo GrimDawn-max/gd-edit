@@ -34,8 +34,10 @@ One self-contained HTML file you can open in any browser, keep, or send.
 ```
 write character-sheet ~/Desktop/mary.html
 write character-sheet "C:\Users\You\Desktop\My Sheet.html"
-write character-sheet ~/Desktop/            a folder: the character names the file
 ```
+
+Give it a folder rather than a filename and it names the file after the
+character — `write character-sheet ~/Desktop/` writes `ColdFluffy-sheet.html`.
 
 **The picture.** The panel beside the gear takes a character screenshot — drag one
 onto it in the browser. A dropped picture stays in your browser rather than in the
