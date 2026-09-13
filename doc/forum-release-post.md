@@ -61,24 +61,6 @@ internet. Every tooltip works for the recipient exactly as it does for you. It
 fetches nothing — there is no network code in it at all, which you can confirm by
 opening it in a text editor.
 
-### `resists` — the ten resistances, computed
-
-```
-resists                    the ten resistances
-resists all                and where each figure comes from
-```
-
-Resistances are not in a save file. The game works them out when it loads a
-character, so gd-edit does the same work: your gear at its real rolled values, the
-components, augments and set bonuses on it, the skills your items grant, the
-devotion stars that are passive, the auras you have switched on, and the difficulty
-penalty — then capped.
-
-Because they are computed rather than read, a figure that disagrees with the
-character screen is worth knowing about. `resists all` prints the parts each total
-is made of, which is usually enough to see which one is at fault, and what the
-figure would be without the cap.
-
 ### `write character-csv` and `write character-json` — the character as data
 
 ```
@@ -97,6 +79,24 @@ is already resolved, so whatever reads it needs no copy of the game files. That 
 the point of it. The game database is Crate's, and it is far too large to ship or
 upload, while this file is a few tens of kilobytes of your own save with the numbers
 already worked out.
+
+### `resists` — the ten resistances, computed
+
+```
+resists                    the ten resistances
+resists all                and where each figure comes from
+```
+
+Resistances are not in a save file. The game works them out when it loads a
+character, so gd-edit does the same work: your gear at its real rolled values, the
+components, augments and set bonuses on it, the skills your items grant, the
+devotion stars that are passive, the auras you have switched on, and the difficulty
+penalty — then capped.
+
+Because they are computed rather than read, a figure that disagrees with the
+character screen is worth knowing about. `resists all` prints the parts each total
+is made of, which is usually enough to see which one is at fault, and what the
+figure would be without the cap.
 
 ### Item tooltips
 
