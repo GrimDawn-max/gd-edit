@@ -10,6 +10,7 @@
   (:require [clojure.test :refer [deftest testing is]]
             [clojure.string :as str]
             [gd-edit.item-stats :as is]
+            [gd-edit.whats-new :as wn]
             [gd-edit.sheet.render :as render]))
 
 (def ^:private doc (render/document "Mary" "body{color:red}" ["one();" "two();"]))
@@ -50,3 +51,33 @@
     (is (= 12.5 (is/display-round 12.5)))
     (is (= 0.75 (is/display-round 0.75)))
     (is (= 2.0001 (is/display-round 2.0001)))))
+
+(deftest release-highlights
+  ;; The escaping is the whole difficulty here, and it shipped wrong once: the
+  ;; regex matched two backslashes where one was meant, so the body never
+  ;; matched and the feature was silently dead. Every test of the parser passed,
+  ;; because the parser was never what was broken.
+  (let [response (str "{\"tag_name\":\"v9.9.9\",\"body\":\""
+                      "## What's new\\n\\n"
+                      ;; the API sends non-ASCII as UTF-8, not as \\uXXXX
+                      "- `write character-sheet` \u2014 a web page\\n"
+                      "- a shield reads \\\"34% Chance to block\\\"\\n\\n"
+                      "## Fixes\\n\\n- something else\\n"
+                      "\",\"draft\":false}")
+        lines (wn/highlights-from-json response)]
+    (testing "the section is found through the JSON escaping"
+      (is (= 2 (count lines)))
+      (is (= "• write character-sheet — a web page" (first lines))))
+
+    (testing "a quote inside the notes does not end the body early"
+      (is (str/includes? (second lines) "\"34% Chance to block\"")))
+
+    (testing "what is under a later heading is not part of it"
+      (is (not-any? #(str/includes? % "something else") lines))))
+
+  (testing "a release with no such section says nothing"
+    (is (nil? (wn/highlights-from-json "{\"body\":\"## Fixes\\n\\n- one\\n\"}"))))
+
+  (testing "and nothing at all is survivable"
+    (is (nil? (wn/highlights-from-json nil)))
+    (is (nil? (wn/highlights-from-json "not json")))))
