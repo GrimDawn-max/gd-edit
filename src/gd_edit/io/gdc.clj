@@ -346,13 +346,21 @@
 
    :items  (s/array StashItem)
 
-   ;; Fangs of Asterkarn appended this trailer to every stash tab. Zero in every
-   ;; file observed so far; purpose unknown.
+   ;; Fangs of Asterkarn appended this trailer to every stash tab, and it is the
+   ;; same trailer the transfer stash carries -- see stash/InventorySack. These
+   ;; four are the tab's icon and colour, zero until one is set.
    :v11-unk1 (after-item-version item-version-foa :int32z)
    :v11-unk2 (after-item-version item-version-foa :int32z)
    :v11-unk3 (after-item-version item-version-foa :int32z)
    :v11-unk4 (after-item-version item-version-foa :int32z)
-   :v11-unk5 (after-item-version item-version-foa :int32z)))
+
+   ;; The tab's name, and the same trap that broke the transfer stash in
+   ;; 0.2.559: this is a UTF-16LE string, not a fifth int, and the int that was
+   ;; read here is its length. Every tab seen is unnamed, where a zero length
+   ;; with no characters behind it is byte-identical to an int zero -- so
+   ;; reading it as a string changes nothing until a named tab turns up, and
+   ;; then it is the difference between working and refusing the file.
+   :tab-name (after-item-version item-version-foa (s/string :utf-16-le))))
 
 (defn read-block4
   [^ByteBuffer bb context]

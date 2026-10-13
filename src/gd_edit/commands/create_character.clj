@@ -714,9 +714,10 @@
     (fill-nils {:ascended-name "" :v11-unk2 0
                 :seed-reroll-count 0 :affix-reroll-count 0} x)
 
-    ;; a stash tab -- block 4 gained a five-int trailer per tab
+    ;; a stash tab -- block 4 gained a per-tab trailer: four ints for the icon
+    ;; and colour, then the tab's name, which is empty on a tab nobody renamed
     (and (map? x) (contains? x :width) (contains? x :height))
-    (fill-nils {:v11-unk1 0 :v11-unk2 0 :v11-unk3 0 :v11-unk4 0 :v11-unk5 0}
+    (fill-nils {:v11-unk1 0 :v11-unk2 0 :v11-unk3 0 :v11-unk4 0 :tab-name ""}
                (into (empty x) (map (fn [[k v]] [k (ensure-foa-fields v)])) x))
 
     ;; a skill record -- block 8 gained one byte after :enabled
