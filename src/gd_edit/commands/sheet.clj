@@ -3,6 +3,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [gd-edit.app-util :as au]
+            [gd-edit.item-stats :as item-stats]
             [gd-edit.globals :as globals]
             [gd-edit.sheet.render :as render]
             [gd-edit.utils :as u]))
@@ -103,6 +104,7 @@
           (let [f (render/write! @globals/character path
                                  :portrait pics :art? art?)]
             (u/newline-)
+            (item-stats/warn-if-absent! "This sheet")
             (u/print-line (format "Written %s  (%s)" (.getAbsolutePath f) (size-of f)))
             (when (seq pics)
               (u/print-line (if (= 1 (count pics))

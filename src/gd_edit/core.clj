@@ -37,6 +37,7 @@
              ]
             [gd-edit.game-dirs :as dirs]
             [gd-edit.globals :as globals]
+             [gd-edit.item-stats :as item-stats]
             [gd-edit.jline :as jl]
             [gd-edit.self-update :as su]
             [gd-edit.whats-new :as whats-new]
@@ -681,6 +682,7 @@
 
   (notify-repl-if-latest-version-available)
   (notify-what-this-build-added)
+  (item-stats/warn-if-absent! "Item values")
 
   (repl))
 

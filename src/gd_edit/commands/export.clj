@@ -169,6 +169,7 @@
         (let [rows (character-rows @globals/character)]
           (with-open [w (io/writer target)]
             (csv/write-csv w (cons columns (map (fn [r] (map #(if (nil? %) "" (str %)) r)) rows))))
+          (item-stats/warn-if-absent! "This CSV")
           (u/print-line (green "Written") (yellow (str (count rows)) ) (green "rows to:"))
           (u/print-indent 1)
           (u/print-line (yellow (.getAbsolutePath target))))))))
@@ -345,6 +346,7 @@
             (binding [*out* w
                       pprint/*print-right-margin* 110]
               (json/pprint document :escape-slash false)))
+          (item-stats/warn-if-absent! "This JSON")
           (u/print-line (green "Written") (yellow (str (count (get document "equipment"))))
                         (green "equipped items and the full character sheet to:"))
           (u/print-indent 1)

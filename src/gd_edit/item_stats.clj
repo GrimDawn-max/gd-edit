@@ -18,7 +18,8 @@
   runtime and every entry point here returns nil when it is absent, so gd-edit
   runs unchanged without it and simply shows the unrolled values as it always
   did. See packaging/common/THIRD-PARTY.txt for the terms it is published under."
-  (:require [gd-edit.db-utils :as dbu]))
+  (:require [gd-edit.db-utils :as dbu]
+            [gd-edit.utils :as u]))
 
 (def ^:private pet-calculator
   "The engine's calculatePetBonus method, or nil when the engine is absent."
@@ -50,6 +51,33 @@
   "True when the stat engine can be used."
   []
   (some? @calculator))
+
+(defn warn-if-absent!
+  "Say so, once per call site, when the stat engine is not on the classpath.
+
+  Without it every rolled value reads as nil and gd-edit falls back to the
+  unrolled figures in the records. Nothing fails and nothing looks wrong: armour
+  collapses to the same number in every slot, offensive and defensive ability
+  and most resistances come out low, and a character sheet written in that state
+  carries all of it into a file someone may well post somewhere.
+
+  That has now cost two people a long diagnosis apiece, so the absence is
+  announced rather than inferred. `what` names what is about to be produced, so
+  the warning lands next to the thing it undermines."
+  [what]
+  (when-not (available?)
+    (u/print-line)
+    (u/print-line "WARNING: the item stat engine is not available.")
+    (u/print-indent 1)
+    (u/print-line (str what " will show unrolled item values: armour, offensive"))
+    (u/print-indent 1)
+    (u/print-line "and defensive ability and most resistances will be wrong.")
+    (u/print-line)
+    (u/print-indent 1)
+    (u/print-line "This build was made without it. Run scripts/fetch-item-stats.sh")
+    (u/print-indent 1)
+    (u/print-line "and build again; see RELEASING.md.")
+    (u/print-line)))
 
 (defn- record->stat-map
   "A game record as the field -> value string map the engine expects.
