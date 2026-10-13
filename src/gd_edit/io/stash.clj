@@ -82,13 +82,26 @@
    :width           :int32
    :height          :int32
    :inventory-items (s/array TransferStashItem)
-   ;; Fangs of Asterkarn appended this trailer to every sack. Zero in every
-   ;; file observed so far; purpose unknown.
+   ;; Fangs of Asterkarn appended this trailer to every sack: the tab's
+   ;; customisation, which the game lets you set by right-clicking a stash tab.
+   ;; All four are zero on an untouched tab and non-zero once one is given an
+   ;; icon -- [0 4 10 5] and [1 5 7 1] on the two observed -- so they are the
+   ;; icon and colour selections. They are read as plain ints because which is
+   ;; which has not been established.
    :v11-sack-unk1   (after-stash-version foa-stash-version :int32z)
    :v11-sack-unk2   (after-stash-version foa-stash-version :int32z)
    :v11-sack-unk3   (after-stash-version foa-stash-version :int32z)
    :v11-sack-unk4   (after-stash-version foa-stash-version :int32z)
-   :v11-sack-unk5   (after-stash-version foa-stash-version :int32z)))
+
+   ;; The tab's name, empty unless it has been renamed.
+   ;;
+   ;; This was read as a fifth unknown int until 2026-10-13, because that int is
+   ;; the string's length prefix and every tab observed was unnamed -- a length
+   ;; of zero, with no characters behind it, reads identically to an int zero.
+   ;; The first renamed tab to turn up left the sack short by exactly twice the
+   ;; name's length and the whole file was refused. Same ambiguity that hid
+   ;; :ascended-name in gdc/Item, for the same reason.
+   :tab-name        (after-stash-version foa-stash-version (s/string :utf-16-le))))
 
 (def Block18
   (s/struct-def
