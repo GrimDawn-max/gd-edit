@@ -53,8 +53,8 @@
 
     (testing "the icon and colour sit beside the name"
       ;; set in game as sword/red and chest/purple; both are 0-based UI positions
-      (is (= [1 11] [(:v11-unk2 (first tabs)) (:v11-unk3 (first tabs))]))
-      (is (= [8 0]  [(:v11-unk2 (second tabs)) (:v11-unk3 (second tabs))])))))
+      (is (= [1 11] [(:icon-background-color (first tabs)) (:icon (first tabs))]))
+      (is (= [8 0]  [(:icon-background-color (second tabs)) (:icon (second tabs))])))))
 
 (deftest transfer-stash-tab-names
   (let [tabs (:stash (stash/load-stash-file transfer))]
@@ -68,8 +68,8 @@
       (is (every? #(= "" (:tab-name %)) (drop 2 tabs))))
 
     (testing "icon and colour, set in game as gun/yellow and book/purple"
-      (is (= [3 5] [(:v11-sack-unk2 (first tabs)) (:v11-sack-unk3 (first tabs))]))
-      (is (= [8 2] [(:v11-sack-unk2 (second tabs)) (:v11-sack-unk3 (second tabs))])))))
+      (is (= [3 5] [(:icon-background-color (first tabs)) (:icon (first tabs))]))
+      (is (= [8 2] [(:icon-background-color (second tabs)) (:icon (second tabs))])))))
 
 ;; ----------------------------------------------------------------- writing
 ;;

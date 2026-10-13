@@ -84,14 +84,18 @@
    :inventory-items (s/array TransferStashItem)
    ;; Fangs of Asterkarn appended this trailer to every sack: the tab's
    ;; customisation, which the game lets you set by right-clicking a stash tab.
-   ;; All four are zero on an untouched tab and non-zero once one is given an
-   ;; icon -- [0 4 10 5] and [1 5 7 1] on the two observed -- so they are the
-   ;; icon and colour selections. They are read as plain ints because which is
-   ;; which has not been established.
-   :v11-sack-unk1   (after-stash-version foa-stash-version :int32z)
-   :v11-sack-unk2   (after-stash-version foa-stash-version :int32z)
-   :v11-sack-unk3   (after-stash-version foa-stash-version :int32z)
-   :v11-sack-unk4   (after-stash-version foa-stash-version :int32z)
+   ;; All four are zero on a tab nobody has touched. The same trailer sits on
+   ;; the character's own stash tabs -- see gdc/Stash.
+   ;;
+   ;; Colours index the ten swatches the customisation window offers: untinted,
+   ;; red, orange, yellow, light green, dark green, cyan, blue, violet, purple.
+   ;; The icon indexes twelve: chest, waist, offhand, amulet, relic, pistol,
+   ;; helm, potion, ring, scroll, shield, sword. Both 0-based, both in the order
+   ;; the window lays them out.
+   :icon-border           (after-stash-version foa-stash-version :int32z)
+   :icon-background-color (after-stash-version foa-stash-version :int32z)
+   :icon                  (after-stash-version foa-stash-version :int32z)
+   :icon-foreground-color (after-stash-version foa-stash-version :int32z)
 
    ;; The tab's name, empty unless it has been renamed.
    ;;

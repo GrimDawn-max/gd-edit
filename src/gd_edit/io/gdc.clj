@@ -347,12 +347,18 @@
    :items  (s/array StashItem)
 
    ;; Fangs of Asterkarn appended this trailer to every stash tab, and it is the
-   ;; same trailer the transfer stash carries -- see stash/InventorySack. These
-   ;; four are the tab's icon and colour, zero until one is set.
-   :v11-unk1 (after-item-version item-version-foa :int32z)
-   :v11-unk2 (after-item-version item-version-foa :int32z)
-   :v11-unk3 (after-item-version item-version-foa :int32z)
-   :v11-unk4 (after-item-version item-version-foa :int32z)
+   ;; same trailer the transfer stash carries -- see stash/InventorySack. All
+   ;; four are zero on a tab nobody has customised.
+   ;;
+   ;; The colours are an index into the same ten swatches the game offers:
+   ;; untinted, red, orange, yellow, light green, dark green, cyan, blue,
+   ;; violet, purple. The icon is an index into twelve: chest, waist, offhand,
+   ;; amulet, relic, pistol, helm, potion, ring, scroll, shield, sword. Both are
+   ;; 0-based, and both match the order the customisation window lays out.
+   :icon-border           (after-item-version item-version-foa :int32z)
+   :icon-background-color (after-item-version item-version-foa :int32z)
+   :icon                  (after-item-version item-version-foa :int32z)
+   :icon-foreground-color (after-item-version item-version-foa :int32z)
 
    ;; The tab's name, and the same trap that broke the transfer stash in
    ;; 0.2.559: this is a UTF-16LE string, not a fifth int, and the int that was
