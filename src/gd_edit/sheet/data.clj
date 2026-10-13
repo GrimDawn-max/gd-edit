@@ -243,13 +243,27 @@
                            ;; log every time it starts. Nothing in the install
                            ;; carries it -- the executable's PE version reads
                            ;; 0.3.0.0, a placeholder -- so the log is the source.
-                           :version (let [f (java.io.File.
-                                             (str (System/getProperty "user.home")
-                                                  "/Documents/My Games/Grim Dawn/log.html"))]
-                                      (when (.exists f)
-                                        (with-open [r (clojure.java.io/reader f)]
-                                          (some #(second (re-find #"Version:\s*(v[0-9.]+)" %))
-                                                (take 40 (line-seq r))))))}
+                           ;;
+                           ;; Find it beside the save the character was loaded
+                           ;; from, not at a fixed path under the user's home.
+                           ;; The game writes "<...>/Grim Dawn/log.html" next to
+                           ;; "<...>/Grim Dawn/save", so it is three levels above
+                           ;; the character's own folder. On Windows and macOS
+                           ;; that usually lands on Documents/My Games anyway,
+                           ;; but on Linux the save lives inside a Proton or Wine
+                           ;; prefix and the home path does not exist -- or worse,
+                           ;; holds a leftover log from an install years out of
+                           ;; date, which is then reported as the game's version.
+                           :version (some->> (:meta-character-loaded-from c)
+                                             clojure.java.io/file .getParentFile
+                                             (#(some-> % .getParentFile))   ; _Name -> main
+                                             (#(some-> % .getParentFile))   ; main   -> save
+                                             (#(some-> % .getParentFile))   ; save   -> Grim Dawn
+                                             (#(when % (java.io.File. % "log.html")))
+                                             (#(when (and % (.exists %))
+                                                 (with-open [r (clojure.java.io/reader %)]
+                                                   (some (fn [l] (second (re-find #"Version:\s*(v[0-9.]+)" l)))
+                                                         (take 40 (line-seq r)))))))}
                ;; computed, not read off the save -- see gd-edit.character-stats.
                ;; The save's own :physique and friends are the base before gear,
                ;; masteries and devotions, which on this character is 754 against
