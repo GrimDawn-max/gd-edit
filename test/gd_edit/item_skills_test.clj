@@ -66,3 +66,41 @@
         (gdc/write-character-file (gdc/load-character-file* src) dst)
         (is (= (u/md5-file src) (u/md5-file dst))
             "reading and writing back must not change a byte")))))
+
+(deftest a-populated-subskill-array-survives-a-write
+  ;; Nobody has a save with a subskill in it -- not here, and not the contributor
+  ;; who found the field -- so the writer for that array had never run with
+  ;; anything in it. The game stores a shapeshift form's granted skills in the
+  ;; ordinary skill list and leaves this array empty, which is why it looks
+  ;; vestigial. Vestigial or not, reading the count and ignoring it was wrong,
+  ;; and this is the only way to exercise the fix until a real one appears.
+  (let [src "test-resources/save-files/NamedTabs.gdc"   ; the one fixture at block 8 version 8
+        dst (str (System/getProperty "java.io.tmpdir") "/subskill-written.gdc")
+        entries [{:skill-name "records/skills/playerclass10/wereraven1_skill01_icicles.dbr"
+                  :autocast-skill-name "" :autocast-controller-name ""
+                  :parent-skill-name "records/skills/playerclass10/wereraven1.dbr"}
+                 {:skill-name "records/skills/playerclass10/wereraven1_skill02_icering.dbr"
+                  :autocast-skill-name "" :autocast-controller-name ""
+                  :parent-skill-name "records/skills/playerclass10/wereraven1.dbr"}]
+        c (gdc/load-character-file* src)]
+
+    (is (= [] (:sub-skills c)) "the fixture starts with an empty array, not a missing one")
+
+    (gdc/write-character-file
+     (-> c
+         (assoc :sub-skills entries)
+         (update :meta-block-list
+                 (fn [bs] (mapv #(if (= 8 (:meta-block-id %)) (assoc % :sub-skills entries) %) bs))))
+     dst)
+
+    (let [back (gdc/load-character-file* dst)]
+      (is (= 2 (count (:sub-skills back))))
+      (is (= entries (mapv #(select-keys % [:skill-name :autocast-skill-name
+                                            :autocast-controller-name :parent-skill-name])
+                           (:sub-skills back)))
+          "every one of the four strings must come back as it went in")
+      (testing "and the rest of the character is undisturbed"
+        (is (= (count (:skills c)) (count (:skills back))))
+        (is (= (count (:equipment c)) (count (:equipment back))))
+        (is (= (:character-name c) (:character-name back)))))))
+
