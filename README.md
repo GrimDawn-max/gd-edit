@@ -17,7 +17,13 @@ See [LICENSE](LICENSE).
 
 ## Support
 
-Support is via the [forum page for gd-edit](https://forums.crateentertainment.com/t/tool-gd-save-file-editor/35817) only.
+Support is via the forum only, on either of the two gd-edit threads:
+
+- [GD save file editor](https://forums.crateentertainment.com/t/tool-gd-save-file-editor/35817)
+  -- the editor itself
+- [GD save file editor character viewer](https://forums.crateentertainment.com/t/gd-save-file-editor-character-viewer/159875/2)
+  -- the character sheet and the other `write` commands
+
 Only bug fixes will be reviewed. Feature requests will not be considered.
 
 **Issues here are turned off**, so the forum thread is the place to raise one.
