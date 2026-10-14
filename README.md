@@ -81,7 +81,27 @@ no per-OS CI matrix is needed.
 
 Run the tests:
 
-    $ clojure -X:test
+    $ clojure -M:test -e "
+      (def nss '[gd-edit.ascension-test gd-edit.character-stats-test
+                 gd-edit.seed-search-test gd-edit.sheet-test
+                 gd-edit.stash-tabs-test gd-edit.text-dump-test])
+      (apply require nss)
+      (apply (requiring-resolve 'clojure.test/run-tests) nss)"
+
+The namespaces are listed because some older files under `test/` predate this
+and still want boot and midje, neither of which is a dependency any more, so a
+blanket runner fails before reaching anything current.
+
+Most tests need nothing but the source. The ones that check computed values
+against the game itself have to be told where the game and the saves are, and
+are skipped -- each saying what to set -- when they are not:
+
+    $ GD_EDIT_TEST_GAMEDIR="/path/to/Grim Dawn" \
+      GD_EDIT_TEST_SAVEDIR="$HOME/Documents/My Games/Grim Dawn/save/main" \
+      clojure -M:test -e "..."
+
+Those also need the item stat engine, so run `./scripts/fetch-item-stats.sh`
+first.
 
 Note that running from source fails on Apple Silicon: the bundled jansi 1.16
 ships an x86_64-only native library. Build and run the jar instead.

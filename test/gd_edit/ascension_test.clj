@@ -14,10 +14,14 @@
             [clojure.string :as str]
             [gd-edit.ascension :as ascension]))
 
-(def game-dir "/Volumes/GamesDrive/COGames/GrimDawn/drive_c/GOG Games/Grim Dawn")
+;; The install comes from the environment and has no default -- a path that works
+;; here works nowhere else, and every clone would inherit it. Absent, the tests
+;; below say what to set and skip.
+(def game-dir (System/getenv "GD_EDIT_TEST_GAMEDIR"))
 
 (def db-available?
-  (delay (.exists (io/file game-dir "database/database.arz"))))
+  (delay (boolean (and game-dir
+                       (.exists (io/file game-dir "database/database.arz"))))))
 
 (def loaded
   (delay
@@ -37,7 +41,8 @@
       {:db db :index ix})))
 
 (defn- skip-note [what]
-  (println (format "  SKIPPED %s -- needs a Grim Dawn install at %s" what game-dir)))
+  (println (format "  SKIPPED %s -- set GD_EDIT_TEST_GAMEDIR to a Grim Dawn install"
+                   what)))
 
 ;; A plain Common one-handed sword, and a Legendary medal, so both the cheap and
 ;; the expensive blueprint are exercised.

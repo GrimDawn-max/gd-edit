@@ -19,13 +19,12 @@
             [gd-edit.item-stats :as item-stats]
             [gd-edit.resistances :as res]))
 
-(def game-dir
-  (or (System/getenv "GD_EDIT_TEST_GAMEDIR")
-      "/Volumes/GamesDrive/COGames/GrimDawn/drive_c/GOG Games/Grim Dawn"))
-
-(def save-dir
-  (or (System/getenv "GD_EDIT_TEST_SAVEDIR")
-      "/Users/pj/Documents/My Games/Grim Dawn/save/main"))
+;; Both directories come from the environment and have no default. A path that
+;; works here works nowhere else, and a repo is a bad place to keep one: every
+;; clone would inherit someone else's filesystem. Absent, the tests below say
+;; what to set and skip.
+(def game-dir (System/getenv "GD_EDIT_TEST_GAMEDIR"))
+(def save-dir (System/getenv "GD_EDIT_TEST_SAVEDIR"))
 
 ;; What the character sheet shows. Anything absent was not checked in game and
 ;; is deliberately not asserted -- a guessed expectation would be worse than none.
@@ -60,9 +59,10 @@
                  "Bleeding" [86 15]}})
 
 (def available?
-  (delay (and (.isDirectory (io/file game-dir))
-              (.isDirectory (io/file save-dir))
-              (item-stats/available?))))
+  (delay (boolean (and game-dir save-dir
+                       (.isDirectory (io/file game-dir))
+                       (.isDirectory (io/file save-dir))
+                       (item-stats/available?)))))
 
 (def ^:private loaded
   (delay
@@ -90,8 +90,8 @@
    (str save-dir "/_" name "/player.gdc")))
 
 (defn- skip-note [what]
-  (println (format "  SKIPPED %s -- needs a Grim Dawn install at %s and saves at %s"
-                   what game-dir save-dir)))
+  (println (format "  SKIPPED %s -- set GD_EDIT_TEST_GAMEDIR and GD_EDIT_TEST_SAVEDIR, and the stat engine must be on the classpath"
+                   what)))
 
 (deftest character-sheet-matches-the-game
   (if-not @available?

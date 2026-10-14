@@ -60,14 +60,16 @@
 
 ;; ------------------------------------------------------- game-data dependent
 
-(def game-dir
-  (or (System/getenv "GD_EDIT_TEST_GAMEDIR")
-      "/Volumes/GamesDrive/COGames/GrimDawn/drive_c/GOG Games/Grim Dawn"))
+;; The install comes from the environment and has no default -- a path that works
+;; here works nowhere else, and every clone would inherit it. Absent, the tests
+;; below say what to set and skip.
+(def game-dir (System/getenv "GD_EDIT_TEST_GAMEDIR"))
 
 (def db-available?
   (delay
-    (and (.isDirectory (io/file game-dir))
-         (item-stats/available?))))
+    (boolean (and game-dir
+                  (.isDirectory (io/file game-dir))
+                  (item-stats/available?)))))
 
 (def ^:private loaded
   (delay
@@ -91,8 +93,8 @@
 (defn- record-named [n] (get (:index @loaded) n))
 
 (defn- skip-note [what]
-  (println (format "  SKIPPED %s -- needs a Grim Dawn install at %s and the stat engine"
-                   what game-dir)))
+  (println (format "  SKIPPED %s -- set GD_EDIT_TEST_GAMEDIR to a Grim Dawn install, and the stat engine must be on the classpath"
+                   what)))
 
 ;; Six items created in gd-edit, written to a save, and read off the game's own
 ;; tooltips. See seed-verification-dataset.md.
