@@ -103,8 +103,31 @@ are skipped -- each saying what to set -- when they are not:
 Those also need the item stat engine, so run `./scripts/fetch-item-stats.sh`
 first.
 
-Note that running from source fails on Apple Silicon: the bundled jansi 1.16
-ships an x86_64-only native library. Build and run the jar instead.
+### The jansi native library
+
+jansi, which handles ANSI colour, wants a small native library whose only job is
+to ask the OS whether stdout is a terminal. The version pinned here ships one
+per platform and has none for Apple Silicon: its newest macOS binary is from
+2016 and holds x86_64 and i386. jansi treats a failed load as unremarkable --
+it assumes a terminal and carries on -- and that fallback is what every Apple
+Silicon user has been running on all along.
+
+Two things follow, and neither needs a per-architecture release:
+
+- The terminal check never runs on arm64, so redirecting gd-edit's output to a
+  file keeps the escape codes in the file. `write character-text` is the way to
+  get clean text.
+- There are two copies of jansi on the classpath. jline 2.14.5 carries its own
+  older one, native loader included, and that copy lets the failure out as an
+  Error instead of swallowing it. It wins when running from source, which is why
+  that used to die on startup on an arm64 Mac; the built jar merges the real
+  jansi over it and survives. `init-jansi` now catches it either way, so the jar
+  no longer depends on that merge order holding.
+
+The real fix, when it is worth the churn, is jansi 2.4 -- which ships natives
+for Mac arm64, Linux arm64 and Windows arm64 -- with jansi-clj 2.0.1. That also
+means moving off jline 2, since its bundled copy would go on shadowing the new
+one, and jline 3 is a different API in `gd_edit/jline.clj`.
 
 ## License
 

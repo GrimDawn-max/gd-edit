@@ -604,11 +604,36 @@
                (str (second pair)))))))
 
 (defn- init-jansi
-  []
+  "Turn on cross-platform ANSI colour, and survive not being able to.
 
-  ;; Enable cross-platform ansi color handling
+  jansi wants a small native library, whose only job is to ask the operating
+  system whether stdout is a terminal. It ships one per platform and has none
+  for Apple Silicon -- the newest it carries for macOS is a 2016 binary holding
+  x86_64 and i386 -- so on an arm64 Mac the load always fails. jansi treats that
+  as unremarkable: it assumes a terminal, which is the right guess, and that
+  fallback is what every Apple Silicon user of the release has been running on
+  all along.
+
+  Whether the fallback is reached at all, though, depends on which copy of jansi
+  the classpath serves, because there are two. jline 2.14.5 carries its own
+  older one, native loader included, and that copy lets the failure out as an
+  Error rather than swallowing it. It wins when running from source, where it
+  made gd-edit die on startup on every arm64 Mac; the built jar happens to merge
+  the real jansi over it and so survives. Relying on that merge order is not
+  worth it, so the failure is caught here.
+
+  None of this touches colour, which is only text wrapped in escape codes. What
+  is lost is the terminal check, so redirecting output to a file keeps the codes
+  in the file. `write character-text` exists partly because of that."
+  []
   (jl/initialize)
-  (jansi-clj.core/install!))
+  (try
+    (jansi-clj.core/install!)
+    (catch Throwable _
+      ;; Deliberately silent. There is nothing for the user to do about it and
+      ;; nothing visibly different about the app, so a warning would only be
+      ;; noise on every start.
+      nil)))
 
 (defn initialize
   []
