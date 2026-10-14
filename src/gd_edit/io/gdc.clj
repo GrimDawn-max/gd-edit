@@ -1425,14 +1425,26 @@
      character)))
 
 (defn write-to-file
+  "Write `bb` to `filepath`, atomically.
+
+  Through a sibling temp file and a rename, so the destination is either the old
+  contents or the new ones and never a half-written file. `FileOutputStream`
+  truncates on open, so writing in place means a failure midway through leaves
+  nothing recoverable."
   [bb filepath]
 
-  (with-open [file-channel (-> (io/file filepath)
-                               (FileOutputStream.)
-                               (.getChannel))]
-    (.write file-channel bb)
-    (.force file-channel true)
-    (.close file-channel)))
+  (let [target (io/file filepath)
+        tmp (io/file (.getParentFile (.getAbsoluteFile target))
+                     (str (.getName target) ".tmp"))]
+    (try
+      (with-open [file-channel (-> tmp (FileOutputStream.) (.getChannel))]
+        (.write file-channel bb)
+        (.force file-channel true))
+      (java.nio.file.Files/move (.toPath tmp) (.toPath target)
+                                (into-array java.nio.file.CopyOption
+                                            [java.nio.file.StandardCopyOption/REPLACE_EXISTING]))
+      (finally
+        (when (.exists tmp) (.delete tmp))))))
 
 (defn get-block
   [block-list block-id]
@@ -1504,8 +1516,16 @@
                {:filepath filepath}
                e)))))) 
 
-(defn write-character-file
-  [character savepath]
+(defn character->bytes
+  "Serialise `character` and return the filled, flipped buffer.
+
+  Kept apart from writing it so a caller can get the bytes *before* touching
+  anything on disk. Serialisation is where a save can fail -- a field the writer
+  needs is missing, a layout is wrong -- and the backup is taken by renaming the
+  original out of the way, so a failure after that point leaves no save file at
+  all. That happened: a newly made item failed to serialise and the character
+  survived only in its .bak."
+  [character]
 
   (let [bb (ByteBuffer/allocate (* 512 1024))
         _ (.order bb java.nio.ByteOrder/LITTLE_ENDIAN)
@@ -1543,5 +1563,8 @@
       (write-block bb block enc-context block-specs))
 
     (.flip bb)
+    bb))
 
-    (write-to-file bb savepath)))
+(defn write-character-file
+  [character savepath]
+  (write-to-file (character->bytes character) savepath))

@@ -256,7 +256,7 @@
 (comment
   (fit-new-item
    [:transfer-stashes 4 :inventory-items]
-   {:var1 0, :stack-count 1, :basename "records/items/gearweapons/swords1h/d002_sword.dbr", :unknown 0, :relic-seed 0, :prefix-name "", :relic-completion-level 0, :seed 949214695, :augment-seed 0, :transmute-name "", :augment-name "", :modifier-name "", :relic-name "", :suffix-name "", :relic-bonus ""})
+   {:var1 0, :stack-count 1, :basename "records/items/gearweapons/swords1h/d002_sword.dbr", :augment-bonus "", :relic-seed 0, :prefix-name "", :relic-completion-level 0, :seed 949214695, :augment-seed 0, :transmute-name "", :augment-name "", :modifier-name "", :relic-name "", :suffix-name "", :relic-bonus ""})
 
   (require 'repl)
 

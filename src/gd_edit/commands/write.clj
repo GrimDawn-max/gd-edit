@@ -113,6 +113,13 @@
 
   (let [savepath (get-savepath character)
 
+        ;; Serialise before touching anything on disk. The backup is taken by
+        ;; renaming the original out of the way, so if this threw afterwards --
+        ;; a field the writer needs missing, a layout wrong -- the character
+        ;; would be left with no save file at all, only a .bak. That is exactly
+        ;; what happened to someone making an item on 0.2.581.
+        bytes (gdc/character->bytes character)
+
         ;; save the file
         [backup-status backup-path] (backup-file savepath)]
     (cond
@@ -132,7 +139,7 @@
     (u/print-indent 1)
     (u/print-line (yellow savepath))
 
-    (gdc/write-character-file character (.getCanonicalPath (io/file savepath)))))
+    (gdc/write-to-file bytes (.getCanonicalPath (io/file savepath)))))
 
 (defn- write-character-file
   [character]

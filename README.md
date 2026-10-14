@@ -92,7 +92,7 @@ Run the tests:
                  gd-edit.item-skills-test gd-edit.quest-layout-test
                  gd-edit.seed-search-test
                  gd-edit.sheet-test gd-edit.stash-tabs-test
-                 gd-edit.text-dump-test])
+                 gd-edit.text-dump-test gd-edit.write-safety-test])
       (apply require nss)
       (apply (requiring-resolve 'clojure.test/run-tests) nss)"
 

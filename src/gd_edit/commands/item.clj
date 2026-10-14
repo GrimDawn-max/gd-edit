@@ -250,13 +250,19 @@
    :relic-seed     0
 
    :augment-name   ""
-   :unknown        0
+   :augment-bonus  ""
    :augment-seed   0
 
    ;; Fangs of Asterkarn ascended affix. Blank on a newly made item -- the altar
    ;; is what fills it in. Must be present, not absent: it writes as a string,
    ;; and a missing value fails the write.
+   ;;
+   ;; The same is true of the two bonus slots beside it, which is how this broke
+   ;; in 0.2.581: they had been read as int32 zeros for years, were renamed to
+   ;; the strings they are, and this map still set the old :unknown key. Every
+   ;; newly made item then failed to write.
    :ascended-name  ""
+   :ascended-bonus ""
 
    :var1        0
    :stack-count 1})
