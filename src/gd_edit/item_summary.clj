@@ -262,7 +262,7 @@
    {:name "Aether", :type :immediate, :record-ref "Aether"}
    {:name "Chaos", :type :immediate, :record-ref "Chaos"}
    {:name "Life Leech", :type :immediate, :record-ref "SlowLifeLeach"}
-   {:name "Mana Leech", :type :immediate, :record-ref "SlowLifeLeach"}])
+   {:name "Mana Leech", :type :immediate, :record-ref "SlowManaLeach"}])
 
 (def ^:private damage-type-display
   "The name the game prints for each damage type the database names differently.

@@ -471,6 +471,40 @@ needs no copy of the game files. That is the point: the game database is 173MB o
 Crate's data that a website cannot ship and you cannot reasonably upload, while this
 file is a few tens of kilobytes of your own save with the numbers already worked out.
 
+### write character-text
+
+Everything the sheet shows, as plain text, so it can be searched.
+
+```
+write character-text ~/Desktop/mary.txt
+write character-text "C:\Users\You\Desktop\mary.txt"
+```
+
+Every item with its full tooltip, every skill at the level it actually reaches, every
+constellation's totals, and the buffs and procs with the chance each fires on.
+
+The sheet already holds all of this — but it lives in tooltips that only exist while
+something is hovered, so a browser's find reaches none of it. This is the same text
+somewhere `grep` can see it.
+
+**Every line sits under the item, skill or constellation it came from**, which is what
+makes it answer *where* something comes from rather than merely whether you have it:
+
+```
+$ grep -B2 "converted to" mary.txt
+--- Weapon: Mythical Dracarris ---
+    100% Chaos Damage converted to Fire Damage
+    100% Physical Damage converted to Fire Damage [80-100]
+
+$ grep -B1 "Chance on Attack" mary.txt
+  Flame Torrent  —  Devotion
+    25% Chance on Attack
+```
+
+It will not add anything up. Grim Dawn's modifiers do not sum cleanly — some are
+global, some apply to one skill, some are pet-only, and some the game rebalances past
+100% — so a total would be confidently wrong where a list is merely long.
+
 ### write character-sheet
 
 The character as the game shows it, as a web page.
