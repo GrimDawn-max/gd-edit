@@ -80,3 +80,21 @@
 
       (testing "and no temp file is left behind"
         (is (not (.exists (io/file (str dst ".tmp")))))))))
+
+(deftest resource-paths-keep-their-first-letter
+  "make-character extracts a blank character out of the jar and then reads it
+  back. The path of each resource arrives with a leading separator from some
+  classpath entries and without one from others, and the code dropped the first
+  character unconditionally -- so from one jar \"player.gdc\" was written as
+  \"layer.gdc\" and make-character failed on a file it had just created.
+
+  It worked from source and from the previous release's jar, which is why it
+  shipped. The handling is a pure function so both forms can be checked here."
+  (is (= "player.gdc" (u/resource-relative-path "/player.gdc")))
+  (is (= "player.gdc" (u/resource-relative-path "player.gdc")))
+  (is (= "levels_world001.map/Normal/map.dat"
+         (u/resource-relative-path "/levels_world001.map/Normal/map.dat")))
+  (is (= "levels_world001.map/Normal/map.dat"
+         (u/resource-relative-path "levels_world001.map/Normal/map.dat")))
+  (is (= "" (u/resource-relative-path "/")))
+  (is (= "" (u/resource-relative-path ""))))

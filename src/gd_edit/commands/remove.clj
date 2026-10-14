@@ -34,6 +34,11 @@
                         [([:shrines _] :seq)] :fixed-length
                         [([:skill-sets _] :seq)] :fixed-length
                         [([:hotslots _] :seq)] :fixed-length
+                        ;; from block 14 version 7 the bars are an array and the
+                        ;; slots inside each are the fixed 46. Removing a bar is
+                        ;; a real edit -- the count is written from the array --
+                        ;; but shortening one would make the block unreadable.
+                        [([:hotbars _ :slots _] :seq)] :fixed-length
                         [([:greatest-monster-killed _] :seq)] :fixed-length
                         [([:boss-kills _] :seq)] :fixed-length
                         [([:tokens-per-difficulty _] :seq)] :fixed-length

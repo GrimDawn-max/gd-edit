@@ -41,7 +41,12 @@
   (->> (utils/collect-walk-first-in-branch #(dbu/get-type %)
                                            (-> character
                                                (dissoc :meta-block-list)
-                                               (dissoc :hotslots)))
+                                               ;; the skill bar is not something
+                                               ;; anyone searches for, and on a
+                                               ;; save from version 7 on it is
+                                               ;; :hotbars rather than :hotslots
+                                               (dissoc :hotslots)
+                                               (dissoc :hotbars)))
        ;; Attach the display name to the object
        (map (fn [[path data]]
               {:path path

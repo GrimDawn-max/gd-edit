@@ -798,6 +798,16 @@
       (io/file sibling-name)
       str))
 
+(defn resource-relative-path
+  "The path of a classpath resource, relative to the directory it was listed under.
+
+  Pulled out of `copy-resource-files-recursive` so it can be tested: whether a
+  path arrives with a leading separator depends on which classpath entry it came
+  from, so the bug this prevents appears only from certain jars and never from
+  source."
+  [path]
+  (if (str/starts-with? path "/") (subs path 1) path))
+
 (defn copy-resource-files-recursive
   "Recursively copies files from a resource directory (which might be in a jar file)
   into the target directory."
@@ -807,7 +817,14 @@
 
     (doseq [[path uris] src-files]
       (let [uri (first uris)
-            relative-path (subs path 1)
+            ;; Drop a leading separator only if there is one. This used to be an
+            ;; unconditional (subs path 1), which ate the first letter of every
+            ;; name when there was not -- "player.gdc" became "layer.gdc" and
+            ;; make-character then failed on a file it had just written itself.
+            ;; Whether the path arrives with one depends on the classpath entry
+            ;; it came from: the same build is fine from source and from one jar
+            ;; and wrong from another, which is why this survived so long.
+            relative-path (resource-relative-path path)
             output-file (io/file target-dir relative-path)]
         (->> output-file
              (.getParentFile)
