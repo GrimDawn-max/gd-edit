@@ -82,9 +82,15 @@ gh release create v<version> target/dist/*.zip --repo GrimDawn-max/gd-edit \
 `--repo` is not optional: this clone has an `upstream` remote pointing at
 Odie/gd-edit, and without it `gh` resolves there and fails with a 404.
 
-Note that `gh release download` does **not** add to an asset's download count --
-it goes through the authenticated API rather than the public URL. Verifying a
-release therefore costs nothing, and the counts stay a measure of real users.
+`gh release download` **does** add to an asset's download count. The counter
+lags by some minutes, so checking straight after a download shows zero and
+invites the wrong conclusion -- that was believed and written down here once,
+and it was wrong.
+
+So verifying a release costs one download against the counts. Pull a single
+platform rather than all three, and treat that one as the baseline when reading
+the numbers afterwards. Anyone wanting a copy without affecting the counts takes
+it from `release-archive/`.
 
 The app checks `api.github.com/repos/GrimDawn-max/gd-edit/releases/latest` on
 startup and compares the tag against its own version, so the tag must be
