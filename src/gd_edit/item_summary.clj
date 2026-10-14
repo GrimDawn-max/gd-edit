@@ -68,7 +68,7 @@
         "WeaponHunting_Ranged2h" "Two-Handed Ranged"
         "WeaponMelee_Axe" "One-Handed Axe"
         "WeaponMelee_Axe2h" "Two-Handed Axe"
-        "WeaponMelee_Dagger" "One-Handed Daggar"
+        "WeaponMelee_Dagger" "One-Handed Dagger"
         "WeaponMelee_Mace" "One-Handed Mace"
         "WeaponMelee_Mace2h" "Two-Handed Mace"
         "WeaponMelee_Scepter" "One-Handed Scepter"

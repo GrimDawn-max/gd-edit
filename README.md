@@ -109,31 +109,43 @@ are skipped -- each saying what to set -- when they are not:
 Those also need the item stat engine, so run `./scripts/fetch-item-stats.sh`
 first.
 
-### The jansi native library
+### Terminal handling: jline 3 and jansi 2
 
-jansi, which handles ANSI colour, wants a small native library whose only job is
-to ask the OS whether stdout is a terminal. The version pinned here ships one
-per platform and has none for Apple Silicon: its newest macOS binary is from
-2016 and holds x86_64 and i386. jansi treats a failed load as unremarkable --
-it assumes a terminal and carries on -- and that fallback is what every Apple
-Silicon user has been running on all along.
+Line editing comes from jline 3 and colour from jansi 2.4, and the two are
+deliberately not wired together.
 
-Two things follow, and neither needs a per-architecture release:
+It used to be jline 2 and jansi 1.16, which failed badly on Apple Silicon.
+jline 2 bundled its own copy of jansi's classes -- same package, older code, its
+own native loader -- and that copy shadowed the real jansi on the classpath.
+Neither had a native library for any arm64 platform, and jline's copy let the
+failed load escape as an `Error`, so running from source died on startup on
+every arm64 Mac. The built jar survived only because its merge order happened to
+put the real jansi on top. jline 3 ships no such copy, and jansi 2.4 carries
+natives for Mac, Linux and Windows on arm64 as well as x86.
 
-- The terminal check never runs on arm64, so redirecting gd-edit's output to a
-  file keeps the escape codes in the file. `write character-text` is the way to
-  get clean text.
-- There are two copies of jansi on the classpath. jline 2.14.5 carries its own
-  older one, native loader included, and that copy lets the failure out as an
-  Error instead of swallowing it. It wins when running from source, which is why
-  that used to die on startup on an arm64 Mac; the built jar merges the real
-  jansi over it and survives. `init-jansi` now catches it either way, so the jar
-  no longer depends on that merge order holding.
+**There is no `AnsiConsole.systemInstall()`.** Installing it wraps `System.out`,
+and on a real terminal that wrapper and jline cannot both have their way --
+measured under a pty, not reasoned about:
 
-The real fix, when it is worth the churn, is jansi 2.4 -- which ships natives
-for Mac arm64, Linux arm64 and Windows arm64 -- with jansi-clj 2.0.1. That also
-means moving off jline 2, since its bundled copy would go on shadowing the new
-one, and jline 3 is a different API in `gd_edit/jline.clj`.
+| order | result |
+|---|---|
+| jline, then jansi | a proper system terminal, but every colour code swallowed |
+| jansi, then jline | colour survived, jline fell back to a dumb terminal, line editing gone |
+| neither | a system terminal **and** colour |
+
+So the wrapper is left out. An escape code written straight to stdout is what a
+terminal wants anyway, and jline 3 handles the Windows console itself, which was
+the only thing the wrapper was needed for.
+
+The consequence is that a redirected run keeps the escape codes in the file,
+exactly as every release so far has. `write character-text` is the way to get
+clean text, and the character sheet *depends* on those codes surviving -- it
+carries them into the page and turns them back into styling.
+
+**Batch mode does not use jline at all.** A file needs no line editing, history
+or terminal. Routing one through jline 3 fought it: `TerminalBuilder.streams`
+alone still builds a system terminal that reads the real stdin, so batch mode sat
+at the prompt waiting for a human. `set-input` reads the stream directly.
 
 ## License
 

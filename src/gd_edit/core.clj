@@ -604,36 +604,28 @@
                (str (second pair)))))))
 
 (defn- init-jansi
-  "Turn on cross-platform ANSI colour, and survive not being able to.
+  "Set up the terminal: line editing from jline, colour as plain escape codes.
 
-  jansi wants a small native library, whose only job is to ask the operating
-  system whether stdout is a terminal. It ships one per platform and has none
-  for Apple Silicon -- the newest it carries for macOS is a 2016 binary holding
-  x86_64 and i386 -- so on an arm64 Mac the load always fails. jansi treats that
-  as unremarkable: it assumes a terminal, which is the right guess, and that
-  fallback is what every Apple Silicon user of the release has been running on
-  all along.
+  There is deliberately no `AnsiConsole.systemInstall()` here, though jansi
+  offers one and gd-edit used to call it. Installing it wraps System.out, and on
+  a real terminal that wrapper and jline cannot both have their way:
 
-  Whether the fallback is reached at all, though, depends on which copy of jansi
-  the classpath serves, because there are two. jline 2.14.5 carries its own
-  older one, native loader included, and that copy lets the failure out as an
-  Error rather than swallowing it. It wins when running from source, where it
-  made gd-edit die on startup on every arm64 Mac; the built jar happens to merge
-  the real jansi over it and so survives. Relying on that merge order is not
-  worth it, so the failure is caught here.
+    jline first, then jansi  -- a proper system terminal, but the wrapper
+                                swallowed every colour code
+    jansi first, then jline  -- colour survived, but jline fell back to a dumb
+                                terminal and took line editing with it
 
-  None of this touches colour, which is only text wrapped in escape codes. What
-  is lost is the terminal check, so redirecting output to a file keeps the codes
-  in the file. `write character-text` exists partly because of that."
+  Both were measured under a pty rather than reasoned about. Leaving the wrapper
+  out gives a system terminal *and* colour, because an escape code written
+  straight to stdout is what a terminal wants anyway, and jline 3 handles the
+  Windows console itself -- which was the only thing the wrapper was needed for.
+
+  The cost is that a redirected run keeps the escape codes in the file, exactly
+  as every release so far has. `write character-text` is the way to get clean
+  text, and the character sheet depends on those codes surviving: it carries
+  them into the page and turns them back into styling."
   []
-  (jl/initialize)
-  (try
-    (jansi-clj.core/install!)
-    (catch Throwable _
-      ;; Deliberately silent. There is nothing for the user to do about it and
-      ;; nothing visibly different about the app, so a warning would only be
-      ;; noise on every start.
-      nil)))
+  (jl/initialize))
 
 (defn initialize
   []
