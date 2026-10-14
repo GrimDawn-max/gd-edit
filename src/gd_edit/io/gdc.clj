@@ -483,8 +483,15 @@
   against the low 8 bits of it, so the two disagree on everything but the first
   byte.
 
-  Every save here carries an empty array, so the layout is taken on the strength
-  of the disassembly rather than tested against a file."
+  Confirmed against two saves a forum contributor supplied for the purpose, one
+  with a single item skill and one with two. :item-name matched the granting
+  item's record exactly in all three, and both files round-trip byte-identical.
+
+  :item-location is an int in the range the disassembly gives, but it is *not* an
+  index into :equipment: a rune in the medal, which is equipment 10, reports 14,
+  while a component in a weapon-set item reports 10 and a relic in equipment 11
+  reports 11. So it is the game's own slot numbering and the mapping is not yet
+  known; the name is kept as the binary has it rather than guessed at."
   (s/struct-def
    :skill-name               (s/string :ascii)
    :autocast-skill-name      (s/string :ascii)
