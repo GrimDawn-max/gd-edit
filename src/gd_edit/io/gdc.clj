@@ -499,6 +499,26 @@
    :item-location            :int32
    :item-name                (s/string :ascii)))
 
+(def SubSkill
+  "A subskill, as block 8 records it after the item skills.
+
+  Four database strings: the subskill, the skill it triggers, that skill's
+  controller, and the skill it hangs off. Layout from a forum contributor who
+  found the loading and saving code in Game.dll.
+
+  gd-edit used to read the *count* of these as an unknown int32 and stop there.
+  That is correct only while the count is zero, which it is in every save anyone
+  involved has -- all 17 here at block version 8, and the contributor has none
+  either, which is why the field sat undecoded on both sides. A save with one
+  would have desynchronised the parse from that point on: the same shape of
+  latent fault as an empty string read as an int, three of which this format
+  has already produced."
+  (s/struct-def
+   :skill-name               (s/string :ascii)
+   :autocast-skill-name      (s/string :ascii)
+   :autocast-controller-name (s/string :ascii)
+   :parent-skill-name        (s/string :ascii)))
+
 (def Block8
   (s/struct-def
    :version SkillBlockVersion
@@ -508,7 +528,7 @@
    :skill-points-reclaimed     :int32
    :devotion-points-reclaimed  :int32
    :item-skills                (s/array ItemSkill)
-   :8-unk1                     (after-block-version 6 :int32)
+   :sub-skills                 (after-block-version 6 (s/array SubSkill))
    {:anchor true}))
 
 (def Block12
