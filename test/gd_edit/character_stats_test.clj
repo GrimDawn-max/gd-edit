@@ -51,8 +51,16 @@
 ;; Resistances as shown, and how far past the cap a capped one runs -- the game
 ;; reports the overshoot on hover, which is the only way a capped figure can be
 ;; checked at all. Without it an error simply hides behind the cap.
+;;
+;; A game patch can move these, so they carry the version they were read at. The
+;; overshoot below was 45 on 1.3.0.8; 1.3.1.1 moved a bleeding resistance bonus
+;; into an aura, which took ColdFluffy from 153 to 186 before the cap. The figure
+;; was re-read off the game's own hover at 1.3.1.1b rather than adjusted to match
+;; what gd-edit computed -- which is the only thing that makes this file worth
+;; having.
 (def observed-resistances
-  {"ColdFluffy" {"Pierce" [83 182] "Bleeding" [83 45] "Vitality" [80 64]
+  {"ColdFluffy" {"Pierce" [83 182] "Bleeding" [83 78]   ; 78 read at 1.3.1.1b
+                 "Vitality" [80 64]
                  "Aether" [80 35] "Chaos" [80 43] "Poison & Acid" [1 nil]
                  "Physical" [0 nil]}
    "RedPriest"  {"Aether" [64 nil] "Chaos" [67 nil] "Physical" [15 nil]
