@@ -711,7 +711,8 @@
   (cond
     ;; an item -- block 3 and block 4
     (and (map? x) (contains? x :basename))
-    (fill-nils {:ascended-name "" :v11-unk2 0
+    (fill-nils {:ascended-name "" :ascended-bonus ""
+                :augment-bonus ""
                 :seed-reroll-count 0 :affix-reroll-count 0} x)
 
     ;; a stash tab -- block 4 gained a per-tab trailer: four ints for the icon
@@ -723,7 +724,7 @@
 
     ;; a skill record -- block 8 gained one byte after :enabled
     (and (map? x) (contains? x :skill-name))
-    (fill-nils {:v8-unk1 0} x)
+    (fill-nils {:locked? 0} x)
 
     (map? x) (into (empty x) (map (fn [[k v]] [k (ensure-foa-fields v)])) x)
     (vector? x) (mapv ensure-foa-fields x)

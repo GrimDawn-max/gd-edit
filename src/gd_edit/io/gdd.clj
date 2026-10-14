@@ -38,16 +38,34 @@
 
 
 (def TaskInnerBlock
+  "One task's state, as GAME::Quest2Task writes it.
+
+  The byte Fangs of Asterkarn added sits *after* the conditions, not before
+  them. gd-edit had it before, which consumed the same total -- 4 + 1 + 1 + 4N
+  either way -- so every quest file still parsed and nothing ever complained.
+  What it actually did was read the low byte of the first condition as the new
+  field and then take the whole array one byte out of step.
+
+  Measured over 1764 tasks in one quest file: under the old layout every one of
+  the 524 condition values came out above 2^24, random 32-bit noise; under this
+  one they are 0, 1, 3, 6, 10 and 19, and 516 of the 524 are 0 or 1. The stray
+  values the old layout showed in its unknown byte -- 3, 6, 10, 19 -- were those
+  same conditions leaking through a byte at a time.
+
+  :point-reward-complete confirms itself: across those 1764 tasks it is 1 on
+  exactly the 562 with state 3 and on no others. Layout and names come from a
+  forum contributor working from GAME::Quest2Task::WriteProperties and
+  ::IsPointRewardComplete.
+
+  Nothing read the conditions, and both layouts write back the same bytes, so no
+  save was ever harmed by this -- it was wrong rather than destructive."
   (s/struct-def
    :state :int32
-   :in-progress :byte
-   ;; Fangs of Asterkarn added one byte here, exactly as block 8's skill records
-   ;; gained one after :enabled. Without it the objectives array is mis-sized and
-   ;; every quest file fails to parse.
-   :v11-unk1 :byte
-   :objectives (s/array :int32
+   :was-in-progress :byte
+   :conditions (s/array :int32
                         :read-length-fn objectives-count
-                        :skip-write-length true)))
+                        :skip-write-length true)
+   :point-reward-complete :byte))
 
 
 (defn read-task-block
@@ -74,12 +92,6 @@
    :static/type :task
    :id1 :int32
    :id2 UID
-
-   ;; :state :int32
-   ;; :in-progress :byte
-   ;; :objectives (s/array :int32
-   ;;                      :read-length-fn objectives-count
-   ;;                      :skip-write-length true)
 
    {:struct/read read-task-block
     :struct/write write-task-block}))

@@ -113,7 +113,8 @@
 (def item-version-foa
   "Block version at which the item record grew by 4 fields: two ahead of
   :relic-completion-level and two after :stack-count. The first of them is
-  :ascended-name, a string; the other three have been zero everywhere observed.
+  :ascended-name and :ascended-bonus, both strings and both empty everywhere
+  observed, and the two reroll counters.
 
   Blocks holding items were at version 4 (character inventory) or 5 (transfer
   stash) before this, and all moved to 11."
@@ -182,7 +183,15 @@
    :relic-seed     :int32
 
    :augment-name   (s/string :ascii)
-   :unknown        :int32
+   ;; The augment's bonus, mirroring :relic-bonus above. Read as an int32 for
+   ;; years because it is empty on every item anywhere -- and an empty string and
+   ;; an int32 zero are both four zero bytes. The item record holds three
+   ;; parallel triples: relic name/bonus/seed, augment name/bonus/seed and
+   ;; ascended name/bonus; the first already read its middle slot as a string,
+   ;; which is what identifies the other two. Reported by a forum contributor who
+   ;; found it in Game.dll as an artifact kept for save files old enough to have
+   ;; used it. Empty on all 1972 items here, relics included.
+   :augment-bonus  (s/string :ascii)
    :augment-seed   :int32
 
    ;; The record of the Fangs of Asterkarn ascended affix applied at the Kurnhold
@@ -194,12 +203,13 @@
    ;; were absent silently yields 0 for every relic level and stack count.
    :ascended-name  (after-item-version item-version-foa (s/string :ascii))
 
-   ;; Zero on all 80 items observed so far, across every alteration the Inventor
-   ;; offers. Best remaining guess is `craft_ascendantreroll`, a fourth reroll
-   ;; recipe no UI record references. Could also be another empty string -- the
-   ;; same ambiguity that hid :ascended-name -- so treat a non-zero value here as
-   ;; a signal to re-examine the layout rather than as a number to trust.
-   :v11-unk2       (after-item-version item-version-foa :int32z)
+   ;; The ascended affix's bonus -- the third of the three name/bonus/seed
+   ;; triples, and the one the game reads and then discards. Another empty string
+   ;; that read as an int32 zero for the same four-zero-bytes reason, which the
+   ;; comment above used to list as the best remaining guess. Confirmed against
+   ;; GAME::ItemReplicaInfo::ReadProperties, which loads two strings here and
+   ;; keeps only the first.
+   :ascended-bonus (after-item-version item-version-foa (s/string :ascii))
 
    :relic-completion-level :int32
    :stack-count            :int32
@@ -444,8 +454,16 @@
    :skill-name               (s/string :ascii)
    :level                    :int32
    :enabled                  :bool
-   ;; Zero in every skill observed so far; purpose unknown.
-   :v8-unk1                  (after-skill-version skill-version-foa :bytez)
+   ;; Whether the game may show this skill to the player. Fangs of Asterkarn
+   ;; added it, and the potion modifiers are what carry it: every character here
+   ;; holds 46 of those entries, and the count that is locked tracks what the
+   ;; character has actually unlocked -- 38 locked on one that has not done the
+   ;; content, 2 on one that nearly has.
+   ;;
+   ;; The comment here used to read "zero in every skill observed so far", which
+   ;; was wrong when it was written: it is zero on every *mastery* skill, and
+   ;; whoever checked never reached the item-skill entries below them.
+   :locked?                  (after-skill-version skill-version-foa :bytez)
    :devotion-level           :int32
    :devotion-experience      :int32
    :sublevel                 :int32
@@ -455,12 +473,24 @@
    :autocast-controller-name (s/string :ascii)))
 
 (def ItemSkill
+  "A skill an item grants, as the save records it.
+
+  The last two fields were an unnamed four bytes and an unnamed string. They are
+  the equipment slot the granting item sits in, 0 to 14, and that item's record
+  -- decoded from the game's own binary by a forum contributor. The four bytes
+  are an int32: read as four ASCII characters they came out as mojibake, because
+  this format decrypts an int against the whole 32-bit cipher state and a byte
+  against the low 8 bits of it, so the two disagree on everything but the first
+  byte.
+
+  Every save here carries an empty array, so the layout is taken on the strength
+  of the disassembly rather than tested against a file."
   (s/struct-def
    :skill-name               (s/string :ascii)
    :autocast-skill-name      (s/string :ascii)
    :autocast-controller-name (s/string :ascii)
-   :unknown-bytes            (s/string :ascii :length 4)
-   :unknown                  (s/string :ascii)))
+   :item-location            :int32
+   :item-name                (s/string :ascii)))
 
 (def Block8
   (s/struct-def
@@ -1294,12 +1324,14 @@
          _ (when (not (contains? #{6 7 8} data-version))
              (throw (Throwable. "I can't read this gdc format!")))
 
-         mystery-field (read-bytes! bb enc-context 16)
+         ;; 16 bytes after the data version, zero in every save seen -- gdcx
+         ;; calls it the archive's uuid and reports the same.
+         uuid (read-bytes! bb enc-context 16)
 
          fileinfo {:seed seed
                    :preamble preamble
                    :data-version data-version
-                   :mystery-field mystery-field}
+                   :uuid uuid}
 
          ;; Keep reading more blocks until we've reached the end of the file
          block-list (->> (loop [block-list (transient [])]
@@ -1430,7 +1462,7 @@
         _ (s/write-struct Header bb (get-block updated-block-list :header) enc-context)
         _ (.putInt bb (int ^long (:enc-state @enc-context)))
         _ (write-int! bb (:data-version fileinfo) enc-context)
-        _ (write-bytes! bb (fileinfo :mystery-field) enc-context)
+        _ (write-bytes! bb (fileinfo :uuid) enc-context)
 
         ]
 
