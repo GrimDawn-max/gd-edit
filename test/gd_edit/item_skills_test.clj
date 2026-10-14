@@ -136,3 +136,30 @@
         (if (>= expected-version 7)
           (is (seq (:hotbars c)))
           (is (= 46 (count (:hotslots c)))))))))
+
+(deftest a-slot-set-per-form
+  "A second shapeshift form adds a third set of slots, and the ints identify it.
+
+  There is still one bar in game, paged with Y; the file keeps a set of slots
+  per shape and the game swaps which one is shown. This fixture is the same
+  character after using Werewolf as well as Wereraven, and it is why gd-edit
+  reads however many sets the count declares rather than one or two."
+  (let [c (gdc/load-character-file* (path "ThreeHotbars.gdc"))
+        bars (:hotbars c)]
+    (is (= 3 (count bars)))
+    (is (= [0 1 2] (mapv :unk-b bars))
+        "the second int is the shape: 0 unshifted, 1 Werewolf, 2 Wereraven")
+    (is (= [47 5 5] (mapv :unk-a bars))
+        "the first int is 47 unshifted and 5 for a form")
+    (is (every? #(= 46 (count (:slots %))) bars)
+        "neither int is a slot count -- every set carries 46")
+
+    (testing "each form's set holds that form's own skills"
+      (let [names (fn [bar] (set (keep :skill-name (:slots bar))))]
+        (is (some #(str/includes? (str %) "werewolf1_skill") (names (nth bars 1))))
+        (is (some #(str/includes? (str %) "wereraven1_skill") (names (nth bars 2))))))
+
+    (testing "and it writes back unchanged"
+      (let [dst (str (System/getProperty "java.io.tmpdir") "/threehotbar-roundtrip.gdc")]
+        (gdc/write-character-file c dst)
+        (is (= (u/md5-file (path "ThreeHotbars.gdc")) (u/md5-file dst)))))))

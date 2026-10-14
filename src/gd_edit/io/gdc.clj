@@ -608,11 +608,26 @@
     :struct/write write-hotslot}))
 
 (def HotBar
-  "One skill bar: two ints whose meaning is not known, then its 46 slots.
+  "One form's set of skill-bar slots: two ints, then 46 slots.
 
-  The pair reads 47/0 on the ordinary bar of every character here and 5/2 on the
-  bar a Wereraven form adds, so they are not a length -- 46 slots are written
-  either way -- and they differ per bar rather than per character."
+  Not a bar the player can switch to. In game there is one bar, paged with Y,
+  and transforming swaps what is on it. The file keeps a separate set of slots
+  for each form the character has been in, and the game shows whichever matches
+  the current shape. Both Y pages, and both weapon sets, live inside a single
+  set of 46 -- a character with no forms has exactly one set however much they
+  page.
+
+  The second of the pair says which shape the set belongs to: 0 unshifted, 1
+  Werewolf, 2 Wereraven. Sets are added as forms are first used, so a character
+  who has been both werebeasts carries three, and the count is not bounded by
+  anything gd-edit should assume.
+
+  The first is 47 unshifted and 5 for every form. It is not a length: all three
+  carry 46 slots.
+
+  Established by giving a character the Werewolf line, playing both forms, and
+  reading the file back: the count went 1 to 2 to 3, and the new bar each time
+  carried that form's own skills on its L and R slots."
   (s/struct-def
    :unk-a :int32
    :unk-b :int32
