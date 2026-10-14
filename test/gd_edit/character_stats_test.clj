@@ -42,6 +42,17 @@
    "PoxofFluffy" {:physique 1264 :cunning 300 :spirit 667 :health 22931
                   :energy 3834 :energy-usable 2967
                   :offensive-ability 2538 :defensive-ability 3529 :armour 1955}
+   ;; The character a forum reporter sent to show armour reading low. It is the
+   ;; only one here that exercises either of the two sources fixed in 2026-10:
+   ;; a component socketed in a belt (24 armour, which the 11% modifier showed as
+   ;; 27 missing from every slot) and a mastery passive (Brute Force, +840 Health
+   ;; at rank 8). Every figure below was read off the game's own character sheet
+   ;; on 1.3.1.1b, including all six armour slots.
+   "Purslane"    {:physique 1113 :cunning 405 :spirit 472 :health 12890
+                  :energy 2637
+                  :offensive-ability 2146 :defensive-ability 1875 :armour 1095
+                  :armour-by-slot {"Head" 1030 "Shoulders" 1030 "Chest" 1142
+                                   "Arms" 1153 "Legs" 865 "Feet" 1483}}
    "RedPriest"   {:physique 841 :cunning 841 :spirit 451 :health 8234
                   :energy 2346 :energy-usable 2186
                   :offensive-ability 2010 :defensive-ability 1973 :armour 1086

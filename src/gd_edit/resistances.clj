@@ -401,6 +401,26 @@
        (mapcat (fn [s] (family (:skill-name s) (dbu/record-by-name (:skill-name s)))))
        set))
 
+(defn- player-passives
+  "The character's own mastery passives, at their effective level.
+
+  `passive-devotions` already takes the passives a devotion grants, which are
+  the ones carrying a devotion level; these are the other half -- the passives
+  bought with skill points, which carry none. Nothing collected them, so a
+  passive's contribution was absent from every stat: Brute Force grants +840
+  Health at rank 8, which was the whole of the 1075 Purslane's health was short.
+
+  Read at the effective level, so the ranks gear adds are included, the same way
+  modifiers and auras are read."
+  [character bonuses]
+  (for [s (:skills character)
+        :when (and (:enabled s)
+                   (pos? (long (or (:level s) 0)))
+                   (zero? (long (or (:devotion-level s) 0))))
+        :let [r (dbu/record-by-name (:skill-name s))]
+        :when (and r (= "Skill_Passive" (str (get r "Class"))))]
+    [r (effective-level bonuses (:skill-name s) (:level s))]))
+
 (defn- player-modifiers
   "Skill modifiers the character has points in that raise their own resistances.
 
@@ -469,6 +489,8 @@
                       :when (and r (= "Skill_Mastery" (str (get r "Class")))
                                  (pos? (long (or (:level s) 0))))]
                   {:record r :level (:level s)})
+     :passives (for [[r level] (player-passives character bonuses)]
+                  {:record r :level level})
      :devotions (for [s (passive-devotions character)]
                   {:record (dbu/record-by-name (:skill-name s)) :level (:level s)})
      :auras (for [[r level] (active-buffs character bonuses)] {:record r :level level})}))

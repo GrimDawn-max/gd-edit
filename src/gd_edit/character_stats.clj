@@ -164,8 +164,19 @@
         defensive (ability "characterDefensiveAbility" "characterDefensiveAbilityModifier" physique)
 
         ;; armour not worn on one of the six slots is shared across all of them
-        shared (- (g "defensiveProtection")
-                  (reduce + 0.0 (map #(slot-protection (nth equipment %)) (keys armour-slots))))
+        shared (+ (- (g "defensiveProtection")
+                     (reduce + 0.0 (map #(slot-protection (nth equipment %)) (keys armour-slots))))
+                  ;; A component's own armour follows the piece it is socketed in,
+                  ;; and only the six armour slots were being read -- so a
+                  ;; component in a belt, ring, amulet, medal or weapon was lost.
+                  ;; The game adds those to every slot, exactly as its tooltip
+                  ;; says: "bonuses on skills and on non-armor pieces are added to
+                  ;; all armor slots". Purslane's belt carries 24, which the 11%
+                  ;; modifier turned into the 27 missing from each of its slots --
+                  ;; the discrepancy reported on the forum.
+                  (reduce + 0.0 (for [i (range (count equipment))
+                                      :when (not (contains? armour-slots i))]
+                                  (bonus-protection (nth equipment i)))))
         exact (into {} (for [[i [label _]] armour-slots]
                          [label (with-modifier (+ (slot-protection (nth equipment i))
                                                   (bonus-protection (nth equipment i))
