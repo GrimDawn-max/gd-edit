@@ -53,6 +53,26 @@
                   :offensive-ability 2146 :defensive-ability 1875 :armour 1095
                   :armour-by-slot {"Head" 1030 "Shoulders" 1030 "Chest" 1142
                                    "Arms" 1153 "Legs" 865 "Feet" 1483}}
+   ;; Read off the game on 1.3.1.1b to check the two sources fixed in 2026-10 on
+   ;; a second character. Every figure matched, all six armour slots included.
+   "TestNight"   {:physique 1032 :cunning 1020 :spirit 406 :health 20940
+                  :energy 1879
+                  :offensive-ability 3279 :defensive-ability 3212 :armour 2445
+                  :armour-by-slot {"Head" 2434 "Shoulders" 2434 "Chest" 2754
+                                   "Arms" 1647 "Legs" 2715 "Feet" 2154}}
+
+   ;; Also read off the game on 1.3.1.1b. :offensive-ability is deliberately
+   ;; absent: the game shows 3384 and gd-edit computes 3207, and nothing found so
+   ;; far explains the 177. Every skill, item, attachment, set and aura whose
+   ;; record mentions offensive ability is counted; no proc grants any; the same
+   ;; formula reproduces this character's defensive ability exactly, and eight
+   ;; other characters' offensive ability exactly. Asserting a number nobody can
+   ;; account for would bake in a guess, so the figure is recorded here and not
+   ;; tested.
+   "TestArcane"  {:physique 1048 :cunning 327 :spirit 1083 :health 20351
+                  :energy 6614
+                  :defensive-ability 3051 :armour 2043}
+
    "RedPriest"   {:physique 841 :cunning 841 :spirit 451 :health 8234
                   :energy 2346 :energy-usable 2186
                   :offensive-ability 2010 :defensive-ability 1973 :armour 1086
