@@ -99,5 +99,10 @@
        ;; nil is what jline 2 gave at end of input, and what every caller here
        ;; already handles
        (catch EndOfFileException _ nil)
-       ;; ctrl-c at a prompt: end this line, not the program
+       ;; Defensive only. jline 3 raises this when the reader itself handles
+       ;; ctrl-c, which needs the interrupt option turned on; left off, as
+       ;; jline 2 left it, ctrl-c reaches the JVM as SIGINT and quits -- which
+       ;; is what every release has done and what was confirmed on a terminal
+       ;; here. Turning it on would make ctrl-c cancel the line instead, a
+       ;; change in behaviour rather than a fix, so it stays off.
        (catch UserInterruptException _ nil)))))
