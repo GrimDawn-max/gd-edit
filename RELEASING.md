@@ -39,11 +39,52 @@ Each zip holds the same jar plus the launcher for that platform.
 
 Version comes from `build.edn`, generated during the build from git.
 
+## The whats_new entry must carry the version the build will produce
+
+`whats_new.clj` holds a compiled-in list, and the first run after an upgrade
+prints the newest entry -- but only if it is newer than the version that ran
+last. The version comes from `git rev-list --count HEAD`, so **every commit
+changes it**, including the commit that adds the entry.
+
+Get this wrong and nothing fails: the release builds, publishes and runs, and
+the notice is simply silent. It happened on 0.2.581, where the entry said
+0.2.572 because that was the count when the text was written.
+
+So: write the entry, commit it, then
+
+```
+git rev-list --count HEAD
+```
+
+and make the entry's `:version` that number. If it needs changing, `git commit
+--amend` rather than making another commit -- a new commit moves the count
+again.
+
+## Archive the zips
+
+`target/` is deleted at the start of every build, so anything left there is
+gone on the next one. Copy the three zips to `release-archive/` and append
+their checksums, which is also where to send anyone who wants a copy without
+adding to the GitHub download counts:
+
+```
+cp target/dist/gd-edit-<version>-*.zip ../release-archive/
+(cd ../release-archive && shasum -a 256 gd-edit-<version>-*.zip >> SHA256SUMS.txt)
+```
+
 ## Publish
 
 ```
-gh release create v<version> dist/*.zip --title "v<version>" --notes-file notes.md
+gh release create v<version> target/dist/*.zip --repo GrimDawn-max/gd-edit \
+  --title "v<version>" --notes-file notes.md
 ```
+
+`--repo` is not optional: this clone has an `upstream` remote pointing at
+Odie/gd-edit, and without it `gh` resolves there and fails with a 404.
+
+Note that `gh release download` does **not** add to an asset's download count --
+it goes through the authenticated API rather than the public URL. Verifying a
+release therefore costs nothing, and the counts stay a measure of real users.
 
 The app checks `api.github.com/repos/GrimDawn-max/gd-edit/releases/latest` on
 startup and compares the tag against its own version, so the tag must be
