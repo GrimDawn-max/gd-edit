@@ -104,3 +104,35 @@
         (is (= (count (:equipment c)) (count (:equipment back))))
         (is (= (:character-name c) (:character-name back)))))))
 
+
+(deftest a-shapeshift-form-adds-a-second-hotbar
+  "Block 14 holds a count of skill bars, not three unknown ints.
+
+  A Fangs of Asterkarn shapeshift form gives the character a second bar: use
+  Wereraven once and block 14 goes from 514 bytes to 1508, at the same block
+  version 7. gd-edit read a single bar and refused the whole save, which anyone
+  playing that mastery would have hit with no way to tell it from corruption.
+
+  This fixture is a character saved while in Wereraven form."
+  (let [c (gdc/load-character-file* (path "TwoHotbars.gdc"))]
+    (is (= 2 (count (:hotbars c))) "the form's bar is the second one")
+    (is (every? #(= 46 (count (:slots %))) (:hotbars c))
+        "both bars hold 46 slots -- the ints ahead of them are not a length")
+    (is (nil? (:hotslots c))
+        "at version 7 the bars come from :hotbars; :hotslots is for older saves")
+
+    (testing "and it writes back unchanged"
+      (let [dst (str (System/getProperty "java.io.tmpdir") "/twohotbar-roundtrip.gdc")]
+        (gdc/write-character-file c dst)
+        (is (= (u/md5-file (path "TwoHotbars.gdc")) (u/md5-file dst)))))))
+
+(deftest older-block-14-layouts-still-read
+  ;; before the count existed there was one bar written inline
+  (doseq [[n expected-version] {"Odie.gdc" 5 "z20.gdc" 6 "NamedTabs.gdc" 7}]
+    (testing n
+      (let [c (gdc/load-character-file* (path n))
+            b (first (filter #(= 14 (:meta-block-id %)) (:meta-block-list c)))]
+        (is (= expected-version (:version b)))
+        (if (>= expected-version 7)
+          (is (seq (:hotbars c)))
+          (is (= 46 (count (:hotslots c)))))))))

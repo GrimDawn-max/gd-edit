@@ -607,6 +607,17 @@
    {:struct/read read-hotslot
     :struct/write write-hotslot}))
 
+(def HotBar
+  "One skill bar: two ints whose meaning is not known, then its 46 slots.
+
+  The pair reads 47/0 on the ordinary bar of every character here and 5/2 on the
+  bar a Wereraven form adds, so they are not a length -- 46 slots are written
+  either way -- and they differ per bar rather than per character."
+  (s/struct-def
+   :unk-a :int32
+   :unk-b :int32
+   :slots (s/array HotSlot :length 46)))
+
 (def Block14
   (s/struct-def
    :version                :int32
@@ -621,17 +632,36 @@
                              :skill-active    :bool)
                             :length 5)
 
-   :14-unk2                 (after-block-version 7 :int32)
-   :14-unk3                 (after-block-version 7 :int32)
-   :14-unk4                 (after-block-version 7 :int32)
+   ;; The skill bar, or bars. :14-unk2 was the *number* of them and the two ints
+   ;; after it belonged to the first one, which looked like three unknown ints
+   ;; for as long as every character had exactly one bar.
+   ;;
+   ;; A Fangs of Asterkarn shapeshift form brings a second: transform once as a
+   ;; Wereraven and the game writes two, and block 14 goes from 514 bytes to
+   ;; 1508. gd-edit read one bar and refused the file -- which is what a
+   ;; character who had used the new mastery's forms would have met, with no way
+   ;; to tell it from a corrupt save.
+   ;;
+   ;; With one bar this reads and writes exactly the bytes the old layout did:
+   ;; a count of 1, then the pair of ints, then 46 slots.
+   :hotbars                 (after-block-version 7 (s/array HotBar))
 
+   ;; Before the count existed there was one bar, written inline.
    :hotslots                (s/conditional
-                             (fn [data _]
-                               (cond
-                                 (= (:version data) 4)
-                                 (s/array HotSlot :length 36)
-                                 :else
-                                 (s/array HotSlot :length 46))))
+                             (fn [data context]
+                               ;; On the way out the version is not on `data` --
+                               ;; it is on the anchor, which is why
+                               ;; `after-block-version` looks there. Reading
+                               ;; (:version data) and comparing it works only
+                               ;; while reading.
+                               (let [v (:version (if (= (:mode @context) :write)
+                                                   (peek (:anchor-stack @context))
+                                                   data))]
+                                 (cond
+                                   (nil? v) nil
+                                   (>= v 7) nil
+                                   (= v 4) (s/array HotSlot :length 36)
+                                   :else (s/array HotSlot :length 46)))))
    :camera-distance        :float
 
    :14-unk1                (after-block-version 6 :int32)
