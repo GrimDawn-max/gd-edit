@@ -84,6 +84,26 @@
                    :manifest (.getPath ^java.io.File f)}))))
        first))
 
+(defn- data-fingerprint
+  "A short digest of the databases gd-edit reads, or nil.
+
+  This is the identifier that does not depend on anyone's store. Two installs
+  with the same fingerprint hold byte-identical game data, which is the only
+  question worth asking when a stat, an item or a record disagrees between two
+  people -- and unlike a version it notices a mod, a partial update or a file
+  that never finished downloading.
+
+  It covers the base database and each expansion's, plus any mod overriding
+  them, because that is the set gd-edit actually loads. 182MB digests in about
+  half a second, so it is computed rather than cached."
+  []
+  (u/swallow-exceptions
+   (let [files (->> (dirs/get-file-and-overrides dirs/database-file)
+                    (filter #(.exists ^java.io.File %)))]
+     (when (seq files)
+       {:digest (subs (u/md5 (.getBytes (str/join "|" (map u/md5-file files)))) 0 16)
+        :count (count files)}))))
+
 (def ^:private gog-product-id "1449651388")
 
 (defn- gog-version-name
@@ -125,6 +145,9 @@
 
     (print-pair "install" (when game-dir (str game-dir)))
     (print-pair "reports itself as" (log-version save-dir))
+    (let [fp (data-fingerprint)]
+      (print-pair "data fingerprint" (when fp (str (:digest fp)
+                                                   "  (" (:count fp) " database files)"))))
 
     (u/newline-)
     (cond
@@ -151,6 +174,13 @@
           (u/print-indent 1)
           (u/print-line "has nothing to read.")))
 
+    (u/newline-)
+    (u/print-indent 1)
+    (u/print-line "The fingerprint is the one that depends on nothing but the files:")
+    (u/print-indent 1)
+    (u/print-line "two installs showing the same one hold identical game data, however")
+    (u/print-indent 1)
+    (u/print-line "they were installed, and it notices a mod or a half-finished update.")
     (u/newline-)
     (u/print-indent 1)
     (u/print-line "What the game reports does not distinguish a hotfix: 1.3.1.1 and")
