@@ -143,7 +143,9 @@
     (u/print-line (green "Game build"))
     (u/newline-)
 
-    (print-pair "install" (when game-dir (str game-dir)))
+    ;; No install path here on purpose. `diag` reports it, and this output is
+    ;; made to be pasted into a bug report, where a path is the one line someone
+    ;; would have to scrub first.
     (print-pair "reports itself as" (log-version save-dir))
     (let [fp (data-fingerprint)]
       (print-pair "data fingerprint" (when fp (str (:digest fp)
@@ -176,19 +178,7 @@
 
     (u/newline-)
     (u/print-indent 1)
-    (u/print-line "The fingerprint is the one that depends on nothing but the files:")
-    (u/print-indent 1)
-    (u/print-line "two installs showing the same one hold identical game data, however")
-    (u/print-indent 1)
-    (u/print-line "they were installed, and it notices a mod or a half-finished update.")
-    (u/newline-)
-    (u/print-indent 1)
-    (u/print-line "What the game reports does not distinguish a hotfix: 1.3.1.1 and")
-    (u/print-indent 1)
-    (u/print-line "1.3.1.1b both say v1.3.1.1, because the letter exists only in the")
-    (u/print-indent 1)
-    (u/print-line "store's packaging. The build id does distinguish them, and GOG can")
-    (u/print-indent 1)
-    (u/print-line "name it; Steam publishes no such list, so a Steam install shows the")
-    (u/print-indent 1)
-    (u/print-line "id alone. Quote it when reporting anything that depends on game data.")))
+    ;; One line. This is a diagnostic someone may run repeatedly, and the
+    ;; reasoning -- why a version does not identify a build, why the fingerprint
+    ;; is the one to trust -- is in `help gamever`, where it is read once.
+    (u/print-line "Quote the fingerprint when reporting anything that depends on game data.")))

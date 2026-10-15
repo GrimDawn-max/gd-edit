@@ -107,12 +107,19 @@ records beside the install — GOG in
 GOG install, the name GOG gives that build:
 
 ```
+Game build
+
     reports itself as:     v1.3.1.1
     data fingerprint:      25fd5fac8398980e  (4 database files)
+
     store:                 GOG
     build id:              60122608161600323
     actually:              1.3.1.1_b
+
+    Quote the fingerprint when reporting anything that depends on game data.
 ```
+
+No paths are printed, so the output is safe to paste into a report as it stands.
 
 The fingerprint is the one that depends on nothing but the files. Two installs
 showing the same one hold identical game data however they were installed, and
