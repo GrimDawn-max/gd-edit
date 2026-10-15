@@ -21,6 +21,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [gd-edit.game-dirs :as dirs]
+            [gd-edit.self-update :as su]
             [gd-edit.utils :as u]
             [clojure.data.json :as json]
             [gd-edit.vdf-parser :as vdf]
@@ -83,6 +84,30 @@
                    :manifest (.getPath ^java.io.File f)}))))
        first))
 
+(def ^:private gog-product-id "1449651388")
+
+(defn- gog-version-name
+  "The name GOG gives `build-id`, such as \"1.3.1.1_b\", or nil.
+
+  The letter that distinguishes a hotfix exists only in the store's packaging,
+  so resolving it means asking the store. GOG publishes its build list without
+  authentication; Steam has no equivalent, so a Steam install can show its build
+  id and nothing more.
+
+  Never throws and never blocks for long: this is a convenience on top of the id,
+  which is already enough to tell two installs apart."
+  [build-id]
+  (when build-id
+    (u/swallow-exceptions
+     (some (fn [os]
+             (let [body (su/fetch-url (str "https://content-system.gog.com/products/"
+                                           gog-product-id "/os/" os "/builds?generation=2"))]
+               (some (fn [b]
+                       (when (= (str (get b "build_id")) (str build-id))
+                         (get b "version_name")))
+                     (get (json/read-str body) "items"))))
+           ["windows" "osx" "linux"]))))
+
 (defn- print-pair [label value]
   (u/print-indent 1)
   (u/print-line (format "%-22s %s" (str label ":") (if value (yellow (str value)) (red "not found")))))
@@ -99,13 +124,19 @@
     (u/newline-)
 
     (print-pair "install" (when game-dir (str game-dir)))
-    (print-pair "version" (log-version save-dir))
+    (print-pair "reports itself as" (log-version save-dir))
 
     (u/newline-)
     (cond
       gog
       (do (print-pair "store" "GOG")
-          (print-pair "build id" (:build gog)))
+          (print-pair "build id" (:build gog))
+          ;; the only place the hotfix letter exists
+          (if-let [n (gog-version-name (:build gog))]
+            (print-pair "actually" n)
+            (do (u/print-indent 1)
+                (u/print-line "actually:              "
+                              (yellow "unresolved -- GOG unreachable, or the build is not listed")))))
 
       steam
       (do (print-pair "store" "Steam")
@@ -122,10 +153,12 @@
 
     (u/newline-)
     (u/print-indent 1)
-    (u/print-line "The version above is what the game itself reports, and it does not")
+    (u/print-line "What the game reports does not distinguish a hotfix: 1.3.1.1 and")
     (u/print-indent 1)
-    (u/print-line "distinguish a hotfix: 1.3.1.1 and 1.3.1.1b both say v1.3.1.1. The")
+    (u/print-line "1.3.1.1b both say v1.3.1.1, because the letter exists only in the")
     (u/print-indent 1)
-    (u/print-line "build id does. Quote it when reporting anything that depends on")
+    (u/print-line "store's packaging. The build id does distinguish them, and GOG can")
     (u/print-indent 1)
-    (u/print-line "game data.")))
+    (u/print-line "name it; Steam publishes no such list, so a Steam install shows the")
+    (u/print-indent 1)
+    (u/print-line "id alone. Quote it when reporting anything that depends on game data.")))

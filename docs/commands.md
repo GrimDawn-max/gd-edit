@@ -100,9 +100,21 @@ help set                   the detail on one command
 gamever
 ```
 
-Shows exactly which build of Grim Dawn is installed: the version the game itself
-reports, and the build id the store records beside the install — GOG in
-`goggame-<id>.info`, Steam in `steamapps/appmanifest_219990.acf`.
+Shows exactly which build of Grim Dawn is installed: what the game reports
+itself as, the build id the store records beside the install — GOG in
+`goggame-<id>.info`, Steam in `steamapps/appmanifest_219990.acf` — and, for a
+GOG install, the name GOG gives that build:
+
+```
+    reports itself as:     v1.3.1.1
+    store:                 GOG
+    build id:              60122608161600323
+    actually:              1.3.1.1_b
+```
+
+Resolving the name asks GOG, which needs no account and fails quietly if the
+network is unavailable. Steam publishes no equivalent list, so a Steam install
+shows the build id alone.
 
 The version alone does not identify a build. Crate's hotfix letters live in the
 distributor's packaging and nowhere in the game: GOG calls one build `1.3.1.1_b`
