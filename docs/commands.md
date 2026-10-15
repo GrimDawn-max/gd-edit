@@ -94,6 +94,27 @@ help                       every command, with a one-line description
 help set                   the detail on one command
 ```
 
+### gamever
+
+```
+gamever
+```
+
+Shows exactly which build of Grim Dawn is installed: the version the game itself
+reports, and the build id the store records beside the install — GOG in
+`goggame-<id>.info`, Steam in `steamapps/appmanifest_219990.acf`.
+
+The version alone does not identify a build. Crate's hotfix letters live in the
+distributor's packaging and nowhere in the game: GOG calls one build `1.3.1.1_b`
+while the game, its log and its splash screen all report `v1.3.1.1`, exactly as
+the build before it did. Two people on different databases can therefore report
+the same version.
+
+Quote the build id when reporting anything that depends on game data — a stat
+that reads wrong, an item showing the wrong values, a save that will not load.
+
+Reads nothing but those two files, and never touches a save.
+
 ### update
 
 ```

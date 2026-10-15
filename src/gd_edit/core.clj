@@ -10,6 +10,7 @@
              [class :as commands.class]
              [db :as commands.db]
              [diag :as commands.diag]
+             [gamever :as commands.gamever]
              [find :as commands.find]
              [gamedir :as commands.gamedir]
              [help :as commands.help]
@@ -131,6 +132,7 @@
    ["update"]  (fn [input] (commands.update/update-handler input))
    ["help"]    (fn [input] (commands.help/help-handler input))
    ["diag"]    (fn [input] (commands.diag/diag-handler input))
+   ["gamever"] (fn [input] (commands.gamever/gamever-handler input))
    ["resists"] (fn [input] (commands.resists/resists-handler input))
    ["batch"]    (fn [input] (commands.batch/batch-handler input))
    ["batch" "item"]    (fn [input] (commands.item/batch-item-handler input))
