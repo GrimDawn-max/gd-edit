@@ -14,6 +14,7 @@
   Needs a Grim Dawn install and these saves, so it skips loudly without them."
   (:require [clojure.test :refer [deftest testing is]]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [gd-edit.commands.respec :as respec]
             [gd-edit.item-stats :as item-stats]))
 
@@ -73,3 +74,44 @@
         ;; MightyFluffy has used the Wereraven form, which hands over Ice Talons
         ;; and Cold Snap at level 1. Counting those made it 256.
         (is (= 250 (refund "MightyFluffy")))))))
+
+(defn- respec-of
+  "The character as respec leaves it."
+  [name]
+  (require '[gd-edit.io.gdc :as gdc])
+  @loaded
+  (respec/respec-character-skills
+   ((resolve 'gd-edit.io.gdc/load-character-file)
+    (str save-dir "/_" name "/player.gdc"))
+   nil))
+
+(deftest leaves-alone-what-it-did-not-refund
+  "Respec used to drop the whole skill list, which threw away far more than it
+  refunded. On a finished character that was 72 entries, including evade, both
+  potion charges, and 46 potion-modifier entries -- the unlocks among them
+  earned through content. None of them cost a point, so none are respec's to
+  take."
+  (if-not @available?
+    (skip-note)
+    (doseq [who ["MaxFluffy" "MightyFluffy" "Purslane"]]
+      (testing who
+        (let [before ((resolve 'gd-edit.io.gdc/load-character-file)
+                      (str save-dir "/_" who "/player.gdc"))
+              after (respec-of who)
+              named (fn [c] (set (map #(str (:skill-name %)) (:skills c))))
+              potion-modifiers (fn [c] (count (filter #(str/includes? (str (:skill-name %))
+                                                                     "potionmodifiers")
+                                                      (:skills c))))]
+
+          (testing "the skills the game grants are still there"
+            (doseq [n ["records/skills/default/defaultevade.dbr"
+                       "records/skills/default/defaulthealthpotion.dbr"
+                       "records/skills/default/defaultmanapotion.dbr"]]
+              (is (contains? (named after) n) (str n " should survive a respec"))))
+
+          (testing "and so is every potion-modifier unlock"
+            (is (= (potion-modifiers before) (potion-modifiers after))))
+
+          (testing "while everything bought is taken back"
+            (is (empty? (filter #'respec/bought? (:skills after))))))))))
+

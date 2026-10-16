@@ -125,10 +125,14 @@
             {;; Refund the points used back to the character
              :skill-points (+ (:skill-points character) points-to-award)
 
-             ;; Remove all skills from the skills vector
+             ;; Take back the skills that were paid for, and leave the rest
+             ;; alone. This used to drop the whole list, which threw away far
+             ;; more than it refunded: evade, both potion charges and every
+             ;; potion-modifier unlock -- 72 entries on a finished character,
+             ;; of which 46 were modifier unlocks earned through content. None
+             ;; of them cost a point, so none of them are respec's to remove.
              :skills (skills-by-category->skills-vec
-                      (dissoc skills-by-category :skills)
-                      )}
+                      (update skills-by-category :skills #(remove bought? %)))}
             character))))
 
 (defn respec-character-devotions
