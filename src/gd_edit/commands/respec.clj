@@ -4,6 +4,7 @@
             [gd-edit.globals :as globals]
             [gd-edit.printer :as printer]
             [gd-edit.db-utils :as dbu]
+            [gd-edit.skill :as skill]
             [clojure.data :refer [diff]]))
 
 (defn skill-is-devotion?
@@ -75,16 +76,49 @@
                    (max 0)))}
             character))))
 
+(def ^:private bought-skills
+  "The skills a player can actually spend a point on.
+
+  Everything a character knows lives in one list, bought or not, so refunding
+  the lot hands out points that were never earned. A level 1 character who has
+  spent nothing was being given 4: evade, the two potion charges and a potion
+  modifier, none of which cost anything. At level 100 that made respec return
+  254 against a maximum of 250.
+
+  Two tests, and the second is the subtle one. A skill must be in a mastery
+  tree -- that excludes the four above, which are in no tree. And it must not
+  carry `skillSet`, which marks the attacks a shapeshift form hands you while
+  you are in it: Ice Talons and Cold Snap for the Wereraven, Feral Claws and
+  Rip and Tear for the Werewolf. Those four *are* in the tree data, so the
+  first test alone leaves a character 2 over per form used. They are the only
+  four of the game's 325 selectable skills carrying the field, so it separates
+  them exactly rather than by guesswork.
+
+  Delayed rather than computed at load: it needs the database."
+  (delay (set (vals (skill/player-selectable-skills)))))
+
+(defn- bought?
+  "Did the player spend a point on this skill?"
+  [s]
+  (let [n (str (:skill-name s))
+        r (dbu/record-by-name n)]
+    (or
+     ;; points put into a mastery bar are bought, and the bar is not itself a
+     ;; tree entry
+     (= "Skill_Mastery" (str (get r "Class")))
+     (and (contains? @bought-skills n)
+          (nil? (get r "skillSet"))))))
+
 (defn respec-character-skills
   [character option]
 
   (let [skills-by-category (skills-vec->skills-by-category (:skills character))
         skills (:skills skills-by-category)
 
-        ;; Compute how many skill points were used
+        ;; Refund only what was paid for
         points-to-award (reduce #(+ % (:level %2))
                                 0
-                                skills)]
+                                (filter bought? skills))]
 
     (merge character
            (dbu/coerce-map-numbers-using-reference
