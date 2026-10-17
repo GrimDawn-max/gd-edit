@@ -332,8 +332,18 @@
   []
 
   (if-let [info-file (io/resource "build.edn")]
-    (let [build-info (edn/read-string (slurp info-file))]
-      (format "%s %s [build %s]" (build-info :app-name) (build-info :version)(build-info :sha)))))
+    (let [build-info (edn/read-string (slurp info-file))
+          branch (str (build-info :branch))]
+      (format "%s %s [build %s%s]"
+              (build-info :app-name) (build-info :version) (build-info :sha)
+              ;; A build from anywhere but the release branch says so. The
+              ;; version is the commit count, so a test build carries a higher
+              ;; number than the release it is ahead of -- without this, a
+              ;; report quoting "0.2.600" gives no way to tell whether that is
+              ;; a release nobody else has or a branch build.
+              (if (contains? #{"main" "master" ""} branch)
+                ""
+                (str " on " branch))))))
 
 (defn- log-build-info
   []

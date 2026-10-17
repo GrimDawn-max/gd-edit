@@ -39,6 +39,62 @@ Each zip holds the same jar plus the launcher for that platform.
 
 Version comes from `build.edn`, generated during the build from git.
 
+## Branches: work on `dev`, release from `main`
+
+Three releases in one day teaches people to ignore the update notice. Fixes
+accumulate on `dev` and reach `main` when they are worth asking everyone to
+download.
+
+```
+git checkout dev
+...work, commit, push...
+```
+
+`main` is only ever what has been released. So the question "what is in the
+current release" is answered by `git log main`, and nothing else has to be
+remembered.
+
+### Test builds go out as prereleases
+
+GitHub's "latest release" endpoint -- the one gd-edit's update check asks --
+returns *"the most recent non-prerelease, non-draft release"*. So a prerelease
+is invisible to everyone running a normal build:
+
+```
+gh release create v<version> target/dist/*.zip --repo GrimDawn-max/gd-edit \
+  --prerelease --title "v<version> (test)" --notes-file notes.md
+```
+
+Testers take it from the releases page. Nobody else is told it exists, and the
+in-app notice keeps pointing at the last real release.
+
+### Version numbers across branches
+
+The version is the commit count, so a `dev` build always numbers *higher* than
+the release it is ahead of -- 0.2.600 against a released 0.2.586. Two useful
+consequences and one trap:
+
+- a tester running a dev build is never nagged to "update" to an older release,
+  because the check only reports a tag that sorts above their own version
+- merging `dev` into `main` moves the count forward by the number of commits
+  merged, so release numbers jump rather than increment. That is harmless; they
+  only have to sort correctly
+- **the trap**: two branches can reach the same count and produce the same
+  version string for different code. The startup banner prints the branch for
+  any build not on `main` -- `gd-edit 0.2.600 [build 1a2b3c4 on dev]` -- and the
+  short sha is in every build, so a report can always be placed exactly. Ask for
+  that line rather than the version alone.
+
+### Releasing for real
+
+```
+git checkout main
+git merge dev
+```
+
+then the whats_new entry, the build, the archive and the publish below, with no
+`--prerelease`.
+
 ## The whats_new entry must carry the version the build will produce
 
 `whats_new.clj` holds a compiled-in list, and the first run after an upgrade
